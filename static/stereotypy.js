@@ -153,6 +153,9 @@ action('export', async () => {
   const url = URL.createObjectURL(await response.blob()); const a = document.createElement('a'); a.href = url; a.download = `stereotypy-${session.id.slice(0,8)}-r${session.revision}.zip`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000); notice('Export saved with source timing and revision history.');
 });
 window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
+fetch('/reports/stereotypy-training/training-report.json', {method:'HEAD'})
+  .then(response => { if (response.ok) $('experimental-model-report').hidden = false; })
+  .catch(() => {});
 (async()=>{
  queue=await api('/api/stereotypy/draft');$('side-view').checked=queue.view_confirmed===true;
  setupView=new RecordingSetup($('recording-setup'),{entries:()=>queue.entries,disabled:()=>preparing||busy,change:()=>saveQueue(),seed:async video=>({video,id:video.split('/').pop().replace(/^[a-f0-9]{8}_/,'').replace(/\.[^.]+$/,'').split('_')[0]}),continue:async()=>{if(!$('side-view').checked)throw Error('Confirm that each video shows one mouse from the side.');await prepareEntry(0);}});

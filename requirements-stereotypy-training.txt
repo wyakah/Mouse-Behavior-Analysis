@@ -1,0 +1,8 @@
+# Optional training environment. Keep these out of the lightweight Flask runtime.
+numpy>=2,<3
+opencv-python-headless>=4.10,<6
+pandas>=2.2,<4
+torch>=2.6,<3
+torchvision>=0.21,<1
+scikit-learn>=1.6,<2
+pytest>=8,<10

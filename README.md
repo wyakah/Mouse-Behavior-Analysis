@@ -8,7 +8,7 @@ A local tool for analyzing three-chamber mouse-behavior recordings from EthoVisi
 
 - **One workflow for one video or a batch:** Choose test → Videos → Test setup/review → Results. Both tests share the same upload and mouse metadata screen, with up to 20 videos per setup.
 - **Mouse metadata and statistics:** mouse ID, sex, and genotype; descriptive summaries, genotype comparisons, within-sex comparisons, and genotype × sex ANOVA in Excel. One independent mouse per sample ID.
-- **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for side-view manual scoring. Automatic stereotypy detectors still require training. Each test opens its own setup and results workflow.
+- **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for side-view manual scoring. Experimental stereotypy models have a separate training and review workflow; automatic measurements still require validation.
 - **Matching cup circles:** one shared diameter across both cups and all recordings, with independently movable centers.
 - **Visual region review:** drag cup circles, floor corners, and chamber dividers; confirm each recording before analysis.
 - **Automatic processing:** score the first 600 seconds, or the available duration for shorter recordings. Originals are retained.
@@ -143,7 +143,7 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ### Side-view stereotypy development
 
-The shared test-selection screen opens a side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, rearing, jumping, and circling intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic behavior classifiers report **model required**. No side-view behavior recognition has been trained or validated.
+The shared test-selection screen opens a side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, rearing, jumping, and circling intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic measurements still require an accepted model. A separate [six-behavior training experiment](docs/stereotypy-training.md) fits temporal heads from external labels and demonstrations, with unlabeled adaptation to the supplied recordings. These models are experimental and are not used to populate scored measurements.
 
 The real 745 and 729 recordings now have a [feasibility assessment, pretrained comparisons, and training plan](docs/stereotypy-feasibility-745-729.md). See also the [original research and integration plan](docs/stereotypy-research-and-plan.md). Definitions remain a draft for lab review.
 

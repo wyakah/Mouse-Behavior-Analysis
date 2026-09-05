@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stereotypy · First trained models</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f2;color:#203b33;font:15px/1.6 system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:28px}a{color:#296951;text-decoration:none}header{display:flex;justify-content:space-between;font-size:13px;margin-bottom:35px}.eyebrow{font-size:11px;letter-spacing:2px;font-weight:700;color:#6d8175}h1{font-size:38px;line-height:1.15;letter-spacing:-1px;margin:10px 0 14px}h2{font-size:23px;letter-spacing:-.5px;margin:0}h3{font-size:18px;margin:12px 0}.intro{max-width:850px;color:#62766a}.notice{padding:16px 20px;border-radius:12px;background:#f0e8d4;border:1px solid #ded0a7;color:#735c2d;margin:24px 0}.facts{display:flex;gap:30px;font-size:13px;margin:24px 0}.facts b{font-size:22px;display:block}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.metric{background:#fff;border:1px solid #dde4da;padding:22px;border-radius:14px}.tag{font-size:11px;color:#63786c;background:#eef3ed;padding:5px 8px;border-radius:5px}.number{font-size:34px;font-weight:650;line-height:1.2}.number small{font-size:11px;font-weight:400;color:#75857a;display:block;margin-top:6px}.number.quiet{font-size:24px;color:#86754e}.metric p{font-size:12px;color:#718176;margin-bottom:0}.panel{margin-top:24px;background:#fff;border:1px solid #dde4da;border-radius:15px;overflow:hidden}.panelhead{padding:22px;display:flex;align-items:center;justify-content:space-between;gap:18px}.panelhead p{font-size:13px;color:#6d8073;margin:4px 0 0}.tabs{display:flex;gap:8px}button,select{font:inherit;color:inherit;border:1px solid #d4ded3;border-radius:8px;padding:9px 13px;background:#fff;cursor:pointer}button[aria-pressed=true]{background:#285e47;color:white;border-color:#285e47}button:hover{border-color:#659777}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #bbaa58;outline-offset:3px}.watch{display:grid;grid-template-columns:minmax(0,3fr) minmax(230px,1fr)}video{width:100%;height:100%;max-height:460px;background:#172b23;display:block}.scores{padding:22px;border-left:1px solid #e3e9e0}.score{margin-bottom:17px}.scoreline{display:flex;justify-content:space-between;font-size:12px;gap:8px}.track{height:5px;background:#ecf0e9;margin-top:6px;border-radius:6px;overflow:hidden}.fill{height:100%;width:0;background:#5c9274}.weak .fill{background:#b59b60}.subtle{font-size:12px;color:#7b8b7e}.actions{padding:16px 22px;display:flex;gap:22px;flex-wrap:wrap;border-top:1px solid #e3e9e0;font-size:13px}.queue{padding:22px}.queuehead{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px}.clips{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.clip{text-align:left;font-size:13px}.clip span{display:block;font-size:11px;color:#778678}.methods{padding:24px}.methods p,.methods li{color:#697d70;font-size:13px;max-width:1000px}.methods li{margin:8px 0}footer{margin-top:25px;font-size:12px;color:#7a8b7e}.pill{font-size:11px;border-radius:5px;background:#f1ead9;color:#8a7545;padding:4px 7px}details summary{cursor:pointer;font-weight:600}.reading{padding:18px 0;font-size:13px;color:#748578}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.watch{grid-template-columns:1fr}.scores{border-left:0;display:grid;grid-template-columns:1fr 1fr;gap:16px}.scores>p{grid-column:1/-1}.clips{grid-template-columns:1fr 1fr}.panelhead{align-items:flex-start;flex-direction:column}}@media(max-width:550px){main{padding:20px 14px}.grid{grid-template-columns:1fr}h1{font-size:30px}.facts{gap:18px}.queuehead{align-items:flex-start;flex-direction:column}header span{display:none}}
+</style></head><body><main>
+<header><a href="/reports/stereotypy-pilot/index.html">← Cage & tracking assessment</a><span>LOCAL MODEL DEVELOPMENT</span></header>
+<div class="eyebrow">STEREOTYPY / FIRST TRAINING EXPERIMENT</div>
+<h1>Six behaviors. Evidence for each.</h1>
+<p class="intro">A temporal model has been fitted using external behavior labels, official demonstration videos, and unlabeled adaptation to mice 745 and 729. Review its suggestions below while keeping the original video in view.</p>
+<div class="notice"><b>Experimental models — not accepted behavior measurements.</b> No accuracy has been established on your mice. Scores are uncalibrated, and no durations or event counts have been accepted from these predictions.</div>
+<div class="facts"><div><b>__SOURCES__</b>source recordings</div><div><b>__WINDOWS__</b>selected video windows</div><div><b>__EPOCH__</b>selected training epoch</div></div>
+<div class="grid">__CARDS__</div>
+<p class="reading">F1 combines precision and recall. These measurements use selected two-second external test windows. They do not measure frame accuracy, bout counts, or accuracy on your cage. MIT recording dates and OSF mother IDs were kept separate across splits; MIT animal identities are unavailable.</p>
+<section class="panel"><div class="panelhead"><div><h2>Watch the model suggestions</h2><p>Two-second windows · 16 sampled frames per window · original review video</p></div><div class="tabs"><button type="button" data-animal="745" aria-pressed="true">Mouse 745</button><button type="button" data-animal="729" aria-pressed="false">Mouse 729</button></div></div>
+<div class="watch"><video id="review" controls preload="metadata"></video><aside class="scores" id="scores" aria-label="Experimental model scores"><p class="subtle" id="clock">Load a recording</p></aside></div>
+<div class="actions"><a id="reviewer">Open behavior reviewer →</a><a id="csv" download>Download model scores CSV</a><a href="training-report.json" download>Training metrics & provenance</a></div>
+<div class="queue"><div class="queuehead"><div><h3>Candidate moments to inspect</h3><div class="subtle">Highest model scores, spaced apart. Clicking plays a six-second context clip; it does not label it.</div></div><label>Behavior <select id="behavior"></select></label></div><div class="clips" id="clips"></div></div></section>
+<section class="panel methods"><details><summary>What was trained, and what still needs validation</summary><ul>
+<li><b>Learned:</b> a temporal network and six output heads, with a denoising reconstruction adapter. ImageNet MobileNetV3 image weights stayed frozen. This is a video-classifier experiment, not a DeepLabCut pose fine-tune.</li>
+<li><b>Grooming and rearing:</b> MIT human annotations. Its original ethogram is mutually exclusive; our assay may allow overlapping behaviors, so the label mapping needs local verification.</li>
+<li><b>Digging:</b> human annotations from the OSF pup-retrieval study. Its overhead view and maternal context differ from your side-view cage.</li>
+<li><b>Nonfood gnawing, jumping and circling:</b> one Stanford positive demonstration video each, trained as whole-video bags. Individual windows were not declared positive. Resting examples from MIT supply explicitly derived negatives. The model can learn recording backgrounds instead of behavior; independent accuracy is unknown. The circling source definition is broader than our completed-turn definition.</li>
+<li><b>Your recordings:</b> cage-cropped, unlabeled reconstruction training and feature normalization. No manual behavior labels were invented, and these two mice are not an independent accuracy test.</li>
+<li><b>Evaluation:</b> whole source groups held out. Preprocessing statistics and weight updates exclude external validation and test data. Epoch selection uses validation average precision; test scores are reported at a fixed 0.5 threshold.</li>
+<li><b>Next acceptance step:</b> verify local positive and negative clips for each behavior, add independent mice and multiple positive recordings for the rare classes, then measure per-class precision/recall, duration error and event-count error. Human-reviewed labels remain authoritative.</li></ul>
+<p>Sources: <a href="https://cbmm.mit.edu/mouse-dataset">MIT mouse behavior dataset</a> · <a href="https://osf.io/rwhtd/">Winters et al. annotated digging data</a> · <a href="https://med.stanford.edu/mousebehavior/ethogram/ethogram-index.html">Stanford Mouse Ethogram</a>. Data and model weights remain local; redistribution rights were not established.</p></details></section>
+<footer>Unknown behavior stays unknown · no automatic labels saved · source video preserved · trained weights and hashes saved locally</footer>
+</main><script id="data" type="application/json">__DATA__</script><script>
+'use strict';
+const data=JSON.parse(document.querySelector('#data').textContent), video=document.querySelector('#review');
+let animal='745', stopAt=null;
+const weak=new Set(['gnawing_nonfood','jumping','circling']);
+const scoreNodes={};
+for(const behavior of data.classes){
+  const row=document.createElement('div');row.className='score'+(weak.has(behavior)?' weak':'');
+  const line=document.createElement('div');line.className='scoreline';
+  const name=document.createElement('span');name.textContent=data.names[behavior]+(weak.has(behavior)?' · weak':'');
+  const value=document.createElement('span');value.textContent='—';line.append(name,value);
+  const track=document.createElement('div');track.className='track';const fill=document.createElement('div');fill.className='fill';track.append(fill);row.append(line,track);document.querySelector('#scores').append(row);scoreNodes[behavior]={value,fill};
+  const option=document.createElement('option');option.value=behavior;option.textContent=data.names[behavior];document.querySelector('#behavior').append(option);
+}
+function displayTime(t){return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');}
+function updateScores(){
+ const current=data.videos[animal], t=video.currentTime;
+ const gap=current.source_gaps.some(g=>t>=g.start_s&&t<g.end_s);
+ const window=gap?null:current.windows.find(w=>w.start_s<=t&&t<w.end_s);
+ document.querySelector('#clock').textContent=displayTime(t)+(window?' · uncalibrated model scores':' · no model window / unknown');
+ for(const b of data.classes){const score=window?.scores[b];scoreNodes[b].value.textContent=score==null?'—':score.toFixed(2);scoreNodes[b].fill.style.width=score==null?'0':(score*100)+'%';}
+ if(stopAt!==null&&t>=stopAt){video.pause();stopAt=null;}
+}
+function buildQueue(){
+ const b=document.querySelector('#behavior').value, current=data.videos[animal];
+ const ranked=[...current.windows].sort((a,z)=>z.scores[b]-a.scores[b]), selected=[];
+ for(const row of ranked){if(selected.every(s=>Math.abs(s.start_s-row.start_s)>=8))selected.push(row);if(selected.length===4)break;}
+ const container=document.querySelector('#clips');container.replaceChildren();
+ for(const row of selected){const button=document.createElement('button');button.className='clip';button.type='button';button.textContent=displayTime(row.start_s)+' · score '+row.scores[b].toFixed(2);const subtitle=document.createElement('span');subtitle.textContent='Play with context →';button.append(subtitle);button.addEventListener('click',()=>{video.currentTime=Math.max(0,row.start_s-2);stopAt=Math.min(current.duration_s,row.end_s+2);video.scrollIntoView({behavior:'smooth',block:'center'});video.play().catch(()=>{});});container.append(button);}
+}
+function selectAnimal(id){video.pause();stopAt=null;animal=id;const current=data.videos[id];video.src=current.video;video.poster=current.poster;document.querySelector('#reviewer').href=current.reviewer;document.querySelector('#csv').href=id+'-model-scores.csv';document.querySelectorAll('[data-animal]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.animal===id)));buildQueue();updateScores();}
+document.querySelectorAll('[data-animal]').forEach(b=>b.addEventListener('click',()=>selectAnimal(b.dataset.animal)));
+document.querySelector('#behavior').addEventListener('change',buildQueue);video.addEventListener('timeupdate',updateScores);video.addEventListener('loadedmetadata',updateScores);
+selectAnimal('745');
+</script></body></html>
