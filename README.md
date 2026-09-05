@@ -6,11 +6,13 @@ A local tool for analyzing three-chamber mouse-behavior recordings from EthoVisi
 
 ## What it does
 
-- **One workflow for one video or a batch:** Videos → Review regions → Results.
+- **One workflow for one video or a batch:** Choose test → Recordings & groups → Regions → Results.
+- **Mouse metadata and statistics:** sample ID, sex, and genotype; descriptive summaries, genotype comparisons, within-sex comparisons, and genotype × sex ANOVA in Excel. One independent mouse per sample ID.
+- **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for side-view manual scoring. Automatic stereotypy detectors still require training. Each test opens its own setup and results workflow.
 - **Matching cup circles:** one shared diameter across both cups and all recordings, with independently movable centers.
 - **Visual region review:** drag cup circles, floor corners, and chamber dividers; confirm each recording before analysis.
 - **Automatic processing:** score the first 600 seconds, or the available duration for shorter recordings. Originals are retained.
-- **Buffered analysis video:** watch smooth annotated footage with every frame in order, landmark confidence, processing stages, and the recording queue. Hide the preview or expand it into Focus view while analysis continues.
+- **Buffered analysis video:** watch smooth annotated footage with every frame in order, landmark confidence, processing stages, and the recording queue. Previews start collapsed; click to watch or expand into Focus view while analysis continues. Hidden previews pause playback and segment downloads.
 - **Subject tracking:** background-based body localization followed by actual DeepLabCut landmark inference.
 - **Three-point labeling:** nose, body center, and tail base. Only manually reviewed frames enter a training export.
 - **Reviewable outputs:** combined workbook, per-frame measurements, bouts, geometry, provenance, and annotated video.
@@ -70,15 +72,16 @@ That directory must contain `node/bin/node` and `node/node_modules/@oai/artifact
 
 ## Using the app
 
-1. **Videos:** add one or more recordings, or select existing workspace recordings. The app automatically chooses available prepared trial copies.
-2. **Review regions:** check the recording ID and social/novel cup side. Move the left and right circles over their cup regions; resize either handle to change the common diameter. Check the floor and chamber dividers. Confirm each recording, then click **Analyze**.
-3. **Results:** watch the live arena preview as recordings process one at a time. Completed videos become available immediately. When the batch finishes, download the combined Excel table and inspect the annotated videos. Detailed exports appear beneath each result.
+1. **Choose test:** select Three Chamber, select Stereotypy, or continue your saved Three Chamber setup. Stereotypy opens the side-view reviewer with its own saved sessions; **Choose test** returns to the shared selection screen.
+2. **Recordings & groups:** add videos, assign a unique sample ID, and record sex and genotype. Missing metadata remains explicit. Bulk fill changes missing fields only. Select optional Excel comparisons and outcomes.
+3. **Regions:** check the social/novel cup side. Move the left and right circles over their cup regions; resize either handle to change the common diameter. Check the floor and chamber dividers. Confirm each recording, then click **Analyze**.
+4. **Results:** follow compact progress as recordings process one at a time; click the thumbnail to watch annotated footage. Completed videos become available immediately. When the batch finishes, download the combined Excel table and inspect the annotated videos. Filter results by sample ID, sex, or genotype. Completed previews are also click-to-play; detailed exports and previous analyses are collapsible.
 
 The live viewer plays continuous annotated video after a small starting buffer, once model preparation and localization finish. Each frame retains its source timestamp. **Watching** and **Video ready through** distinguish playback from processing: slow analysis may buffer, while fast analysis runs ahead. Pause, replay available footage, hide/show, or use Focus view; processing continues independently. **Watch active recording** switches to the current job without forcing you away from an earlier video.
 
 Nose, body-center, and tail-base markers share a renderer with the final review video. Solid markers are accepted, dashed markers are uncertain, and missing points are absent. Confidence values belong to the displayed frame. The tracking preview identifies its provisional stage; the final scored review adds chamber and cup-zone state. Browser streaming requires Media Source Extensions with H.264 support. If preview encoding or playback fails, tracking and final exports remain available. See the [buffered video design and verification notes](docs/live-analysis-plan.md).
 
-Changing the shared diameter or likelihood cutoff clears all region confirmations. Coordinates and reference-frame selection are under **Precise placement & reference image**; the cutoff is under **Advanced tracking settings**. Camera scale and framing must remain consistent across a batch. Matching image resolution alone does not establish matching physical scale.
+Changing sample metadata or statistical settings preserves region confirmations. Changing the shared diameter or likelihood cutoff clears all region confirmations. Coordinates and reference-frame selection are under **Precise placement & reference image**; the cutoff is under **Advanced tracking settings**. Camera scale and framing must remain consistent across a batch. Matching image resolution alone does not establish matching physical scale.
 
 ## Measurement definitions
 
@@ -108,9 +111,27 @@ Each completed recording has a folder under `outputs/`:
 | `manifest.json` | Source/track hashes, method version, and provenance |
 | `review.mp4` | Silent H.264 annotated video retaining source frame timestamps |
 
-The combined workbook is `outputs/<batch-id>/results.xlsx`, with **Results**, **Setup**, and **Bouts** sheets. Failed or unavailable measurements stay blank. A failed recording does not prevent subsequent recordings from being analyzed.
+The combined workbook is `outputs/<batch-id>/results.xlsx`, with **Results** (including sample ID, sex, genotype, and test), **Setup**, **Bouts**, **Groups**, and **Statistics notes** sheets. Selected tests add **Comparisons** and/or **ANOVA**; omitted observations or metadata add **Exclusions**. Failed or unavailable measurements stay blank. A failed recording does not prevent subsequent recordings from being analyzed.
 
 The batch draft and job state are stored in `batches/`. A server restart marks an interrupted job for retry; it does not resume training or inference automatically. Existing tracking predictions are reused only when their manifest matches the working video's content hash.
+
+## Group statistics
+
+Select outcomes before running the batch: social/novel cup time, other cup time, preference index, chamber occupancy, or left/right cup times. Target-relative measures follow each recording's reviewed cup side, allowing left/right counterbalancing. Do not combine different test phases or experimental conditions without accounting for the study design.
+
+- **Group summaries only** (default): valid n, missing n, mean, sample SD, SEM, and unadjusted 95% t confidence intervals, pooled by genotype and split by sex.
+- **Compare genotypes**: two-sided pairwise Welch t-tests, pooling sexes.
+- **Within each sex**: separate genotype Welch comparisons for female and male mice.
+- **Genotype × sex**: OLS with sum contrasts and Type III two-way ANOVA, including interaction and partial eta squared. Requires both sexes in each genotype.
+- **All comparisons**: all of the above, with one Holm correction family across every estimable selected outcome, pairwise test, and ANOVA term. Alpha can be 0.05 or 0.01. Confidence intervals remain unadjusted 95% intervals.
+
+Each sample ID is one independent mouse; frames and bouts are never treated as replicates. Tests require matching analyzed durations and at least two valid mice per tested group (or per factorial cell). This minimum allows calculation; it does not establish adequate power. Missing metadata, unavailable outcomes, zero residual variance, and insufficient groups produce documented reasons instead of invented p-values. No automatic outlier or low-coverage filter is applied, except that an outcome with no scoreable observations is unavailable.
+
+The factorial model assumes independent mice, approximately normal residuals, and constant residual variance. Within-sex significance alone does not establish a difference between sexes; that question requires the interaction. Tracking quality and statistical assumptions still require review.
+
+Exports are **fixed reports**. Editing Excel cells does not recalculate tests. Change setup and rerun the batch to generate a new report; valid cached predictions are reused. The saved `batches/<batch-id>/statistics.json` records settings, individual observations, groups, exclusions, computed tests, software versions, and methods.
+
+Methods: [SciPy Welch t-test](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html), [statsmodels ANOVA](https://www.statsmodels.org/stable/generated/statsmodels.stats.anova.anova_lm.html), and [Holm adjustment](https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html). See [workflow and statistics design](docs/workflow-statistics-plan.md).
 
 ## Labeling and model development
 
@@ -122,7 +143,7 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ### Side-view stereotypy development
 
-The `stereotypy` branch adds a manual side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, and rearing intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic detectors report **model required**. No side-view recognition has been trained or validated.
+The shared test-selection screen opens a manual side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, and rearing intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic detectors report **model required**. No side-view recognition has been trained or validated. These capabilities are integrated into `main`; use the normal app launch and select Stereotypy.
 
 See [the research, integration plan, milestones, and current limits](docs/stereotypy-research-and-plan.md). Definitions are a draft for lab review. Experimental side-view recordings have not yet been supplied.
 

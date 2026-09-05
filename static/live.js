@@ -1,7 +1,7 @@
 /* Analysis status and smooth review playback have separate lifecycles. */
 class LiveAnalysisView {
   constructor(host) {
-    this.host=host;this.batch=null;this.snapshot=null;this.previewHidden=false;this.seenActive=false;
+    this.host=host;this.batch=null;this.snapshot=null;this.previewHidden=true;this.sectionHidden=false;this.seenActive=false;
     this.timer=null;this.request=null;this.epoch=0;this.queueKey='';
     host.innerHTML=`
       <div class="live-heading"><div><div class="live-eyebrow"><span class="live-dot"></span><span data-live="label">LIVE ANALYSIS</span></div><h2 data-live="title">Analysis, in motion.</h2><p data-live="subtitle"></p></div><div class="live-tools"><button data-action="hide" aria-expanded="true">Hide preview</button><button data-action="focus" aria-pressed="false">Focus view ↗</button></div></div>
@@ -21,25 +21,27 @@ class LiveAnalysisView {
     this.player=new AnalysisStreamPlayer(host.querySelector('video'),()=>this.renderPlayback(),()=>{
       if(this.isRunning()&&this.batch.current_index!==this.player.index)this.watchRecording(this.batch.current_index);
     });
-    host.querySelector('[data-action="hide"]').onclick=()=>{
-      this.previewHidden=!this.previewHidden;host.classList.toggle('preview-hidden',this.previewHidden);
-      const b=host.querySelector('[data-action="hide"]');b.textContent=this.previewHidden?'Show preview':'Hide preview';b.setAttribute('aria-expanded',String(!this.previewHidden));
-      this.player.setHidden(this.previewHidden);this.renderPlayback();
-    };
+    const compact=document.createElement('div');compact.className='live-compact';
+    const launch=document.createElement('button');launch.className='preview-launch';launch.innerHTML='<img alt=""><span>▶ Watch analysis</span>';launch.onclick=()=>this.setCollapsed(false);
+    compact.append(launch,host.querySelector('.live-pass'));host.querySelector('.live-layout').before(compact);
+    host.querySelector('[data-action="hide"]').onclick=()=>this.setCollapsed(!this.previewHidden);
+    this.setCollapsed(true);
     host.querySelector('[data-action="focus"]').onclick=()=>{
       const on=host.classList.toggle('focus-view'),b=host.querySelector('[data-action="focus"]');b.textContent=on?'Standard view ↙':'Focus view ↗';b.setAttribute('aria-pressed',String(on));
       host.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
     };
     host.querySelector('[data-action="active"]').onclick=()=>this.watchRecording(this.batch.current_index);
   }
+  setVisible(visible){this.sectionHidden=!visible;this.player.setHidden(!visible||this.previewHidden);}
+  setCollapsed(hidden){this.previewHidden=hidden;this.host.classList.toggle('preview-collapsed',hidden);const b=this.host.querySelector('[data-action="hide"]');b.textContent=hidden?'Expand preview':'Collapse preview';b.setAttribute('aria-expanded',String(!hidden));this.host.querySelector('[data-action="focus"]').hidden=hidden;if(hidden){this.host.classList.remove('focus-view');const focus=this.host.querySelector('[data-action="focus"]');focus.textContent='Focus view ↗';focus.setAttribute('aria-pressed','false');}this.player.setHidden(hidden||this.sectionHidden);if(hidden&&this.batch&&!this.isRunning())this.host.hidden=true;if(!hidden)document.querySelectorAll('.review-video').forEach(p=>p.open=false);this.renderPlayback();}
   isRunning(){return this.batch&&['queued','running'].includes(this.batch.status);}
   time(seconds){if(!Number.isFinite(seconds))return '—';const n=Math.max(0,Math.floor(seconds));return `${Math.floor(n/60).toString().padStart(2,'0')}:${(n%60).toString().padStart(2,'0')}`;}
-  watchRecording(index){if(!Number.isInteger(index))return;this.player.select(this.batch.id,index);this.renderPlayback();}
+  watchRecording(index,expand=true){if(!Number.isInteger(index))return;if(expand)this.setCollapsed(false);const poster=this.host.querySelector('.preview-launch img');poster.src='/api/frame?video='+encodeURIComponent(this.batch.entries[index].video)+'&frame=0&crop=arena';this.player.select(this.batch.id,index);this.renderPlayback();}
   updateBatch(batch) {
     const running=['queued','running'].includes(batch.status);
     if(!running&&(!this.seenActive||this.batch?.id!==batch.id))return;
     const newBatch=this.batch?.id!==batch.id;
-    if(newBatch){this.epoch++;this.request?.abort();clearTimeout(this.timer);this.timer=null;this.request=null;this.snapshot=null;this.queueKey='';}
+    if(newBatch){this.setCollapsed(true);this.epoch++;this.request?.abort();clearTimeout(this.timer);this.timer=null;this.request=null;this.snapshot=null;this.queueKey='';}
     this.batch=batch;this.seenActive||=running;this.host.hidden=false;
     this.host.classList.toggle('is-running',running);this.host.classList.toggle('processing-finished',!running);
     this.q('label').textContent=running?'LIVE ANALYSIS':'ANALYSIS FINISHED';
@@ -47,8 +49,8 @@ class LiveAnalysisView {
     const active=batch.entries.find(e=>e.status==='running');
     this.q('subtitle').textContent=active?`Processing ${active.id} · ${batch.current_index+1} of ${batch.entries.length}`:batch.message;
     this.q('batch-count').textContent=`${batch.entries.filter(e=>e.status==='complete').length} / ${batch.entries.length} complete`;
-    if(newBatch||this.player.index===null)this.watchRecording(batch.current_index??0);
-    else if(this.player.video.ended&&running)this.watchRecording(batch.current_index);
+    if(newBatch||this.player.index===null)this.watchRecording(batch.current_index??0,false);
+    else if(this.player.video.ended&&running&&!this.previewHidden)this.watchRecording(batch.current_index);
     const key=JSON.stringify(batch.entries.map(e=>[e.id,e.status,e.run_id]));
     if(key!==this.queueKey){this.queueKey=key;const box=this.host.querySelector('.live-queue-list');box.replaceChildren();batch.entries.forEach((e,i)=>{
       const row=document.createElement('div');row.className='live-queue-item '+e.status;
@@ -57,7 +59,7 @@ class LiveAnalysisView {
       if(e.status!=='pending'){const button=document.createElement('button');button.textContent='Watch';button.setAttribute('aria-label',`Watch recording ${e.id}`);button.onclick=()=>this.watchRecording(i);row.append(button);}
       box.append(row);
     });}
-    this.renderProgress();this.renderPlayback();
+    this.renderProgress();this.renderPlayback();this.host.hidden=!running&&this.previewHidden;
     if(running&&!this.timer&&!this.request)this.poll();
     if(!running){clearTimeout(this.timer);this.timer=null;this.request?.abort();this.request=null;this.epoch++;}
   }

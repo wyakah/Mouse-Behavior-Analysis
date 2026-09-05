@@ -2,6 +2,8 @@
 
 Prepared 5 September 2026. Status: research complete for the initial architecture; manual-scoring foundation implemented; experimental videos and recognition validation pending.
 
+Integration update: synchronized with `main`'s assay selection, mouse metadata, group statistics, and compact previews (`861a07f`). The shared **Choose your test** screen now opens either Three Chamber or Stereotypy; the side-view page returns via **Choose test**. Three Chamber drafts/statistical settings and Stereotypy sessions remain independent. Explicit navigation to test selection is honored even while a chamber batch is running. The original branch-isolation details below describe the initial development, before integration back into `main`.
+
 ## Decision
 
 Keep the familiar **Recordings → Review → Measurements/export** flow in the existing application. Replace chamber geometry with independently scored behavior intervals and visibility. Start automation with total self-grooming duration, then evaluate digging and nonfood gnawing separately. Keep all three available manually, with optional rearing. Neither ordinary grooming nor digging alone establishes pathological stereotypy.

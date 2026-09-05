@@ -53,3 +53,16 @@ test('status refreshes preserve a manually paused player and buffered footage',a
     assert.equal(h.video.paused,true);assert.equal(h.video.playCount,1);assert.equal(h.player.buffer.appends,2);
   }finally{h.player.release();}
 });
+
+test('a collapsed player fetches nothing and repeated hides preserve resume intent',async()=>{
+ const h=setup();try{
+  h.player.setHidden(true);h.player.select('new-batch',0);await h.player.poll();
+  assert.equal(h.requests.length,0);assert.equal(h.video.playCount,0);
+  h.setManifest({status:'complete'});h.player.setHidden(false);
+  await new Promise(resolve=>setTimeout(resolve,20));
+  assert.equal(h.video.playCount,1);
+  h.player.setHidden(true);h.player.setHidden(true);
+  assert.equal(h.player.resumeOnShow,true);assert.equal(h.video.paused,true);
+  h.player.setHidden(false);assert.equal(h.video.paused,false);
+ }finally{h.player.release();}
+});

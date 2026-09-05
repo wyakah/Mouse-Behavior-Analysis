@@ -7,6 +7,7 @@ from flask import request,jsonify,send_from_directory
 from threechamber.core import analysis_geometry,metadata,analyze,sha256,propose_circles
 from threechamber.preparation import prepare_trial
 from threechamber.live import LivePublisher,atomic_json
+from threechamber.statistics import settings as statistics_settings, sample_metadata, analyze_statistics, METRICS
 
 
 def save_json(path,value):
@@ -22,6 +23,9 @@ def inside(root,name):
 
 
 def validate_batch(root,draft):
+    test_id=draft.get('test_id','three_chamber')
+    if test_id!='three_chamber':raise ValueError('Automatic batch analysis is not available for this test. Select Three Chamber, or open the Stereotypy manual-scoring workspace.')
+    plan=statistics_settings(draft.get('statistics'))
     entries=draft.get('entries',[])
     if not isinstance(entries,list) or not entries:raise ValueError('Add recordings to the batch first.')
     try:diameter=float(draft['diameter_px']);cutoff=float(draft.get('pcutoff',.6))
@@ -32,7 +36,7 @@ def validate_batch(root,draft):
     for entry in entries:
         e=deepcopy(entry);identifier=str(e.get('id','')).strip()
         if not identifier or identifier in ids:raise ValueError('Each recording needs a unique, nonempty ID.')
-        ids.add(identifier);e['id']=identifier
+        ids.add(identifier);e['id']=identifier;e.update(sample_metadata(e))
         p=inside(root,e['video'])
         if not p.is_file() or p.suffix.lower() not in ('.mp4','.avi','.mov','.mkv','.m4v'):raise ValueError(f'{identifier}: video missing.')
         if p in videos:raise ValueError('The same recording appears more than once.')
@@ -46,7 +50,7 @@ def validate_batch(root,draft):
         analysis_geometry(cfg)
         e['status']='pending';e.pop('error',None);e.pop('summary',None);e.pop('run_id',None)
         prepared.append(e)
-    return dict(diameter_px=diameter,pcutoff=cutoff,entries=prepared)
+    return dict(test_id=test_id,statistics=plan,diameter_px=diameter,pcutoff=cutoff,entries=prepared)
 
 
 def get_tracks(root,working,dest,progress):
@@ -84,6 +88,9 @@ def export_workbook(root,batch,folder):
             out=root/'outputs'/e['run_id']
             e['bouts']=pd.read_csv(out/'bouts.csv').to_dict('records')
             e['manifest']=json.loads((out/'manifest.json').read_text())
+    report=analyze_statistics(payload)
+    payload['statistics_report']=report
+    save_json(folder/'statistics.json',report)
     save_json(folder/'workbook-data.json',payload)
     deps=Path(os.environ.get('CODEX_WORKSPACE_DEPENDENCIES',str(Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies')))
     runtime=root/'.cache/xlsx-runtime';runtime.mkdir(parents=True,exist_ok=True)
@@ -128,8 +135,8 @@ def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyze
             e.update(status='failed',error=str(error))
             if live:live.phase('failed','This recording could not be completed')
         persist()
-    batch.update(message='Creating the combined Excel workbook');persist()
-    if live:live.phase('exporting','Creating the combined Excel workbook')
+    batch.update(message='Creating Excel summaries and group statistics');persist()
+    if live:live.phase('exporting','Creating Excel summaries and group statistics')
     try:
         exporter(root,batch,folder)
         batch.update(status='complete' if all(e['status']=='complete' for e in batch['entries']) else 'complete_with_errors',message='Batch complete. Review the results and Excel workbook.',workbook='results.xlsx')
@@ -147,6 +154,10 @@ def register_batch(app,root_fn,pool):
         return batch
     @app.get('/batch')
     def batch_page():return app.send_static_file('batch.html')
+    @app.get('/api/statistics/options')
+    def statistics_options():
+        return jsonify(metrics=METRICS,order=list(METRICS),defaults=statistics_settings())
+
     @app.route('/api/batch/draft',methods=['GET','POST'])
     def batch_draft():
         p=root_fn()/'batches/draft.json'
@@ -154,7 +165,7 @@ def register_batch(app,root_fn,pool):
             data=request.get_json()
             if not isinstance(data,dict) or not isinstance(data.get('entries'),list):raise ValueError('Invalid batch draft.')
             save_json(p,data);return jsonify(saved=True)
-        return jsonify(json.loads(p.read_text()) if p.exists() else dict(diameter_px=110,pcutoff=.6,entries=[]))
+        return jsonify(json.loads(p.read_text()) if p.exists() else dict(test_id='three_chamber',statistics=statistics_settings(),diameter_px=110,pcutoff=.6,entries=[]))
     @app.post('/api/batch/seed')
     def batch_seed():
         name=request.get_json()['video'];root=root_fn();p=inside(root,name);info=metadata(p)
@@ -184,7 +195,8 @@ def register_batch(app,root_fn,pool):
         pool.submit(work);return jsonify(batch)
     @app.get('/api/batches')
     def batch_list():
-        return jsonify([current_status(json.loads(p.read_text())) for p in sorted((root_fn()/'batches').glob('*/batch.json'),reverse=True)])
+        files=sorted((root_fn()/'batches').glob('*/batch.json'),key=lambda p:p.stat().st_mtime,reverse=True)
+        return jsonify([current_status(json.loads(p.read_text())) for p in files])
     @app.get('/api/batches/<identifier>')
     def batch_status(identifier):
         p=inside(root_fn(),'batches/'+identifier+'/batch.json')
