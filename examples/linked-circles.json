@@ -1,0 +1,13 @@
+{
+  "analysis_mode": "circle_zones",
+  "confirmed": false,
+  "arena": [[193, 190], [735, 190], [735, 558], [193, 558]],
+  "dividers_fraction": [0.3333333333333333, 0.6666666666666666],
+  "cup_circles": {"diameter_px": 110, "left": [295, 360], "right": [640, 365]},
+  "pcutoff": 0.6,
+  "start_s": 0,
+  "end_s": 600,
+  "target_side": "unspecified",
+  "geometry_source": "Example only: review floor corners and chamber dividers against the recording.",
+  "zone_geometry_source": "Example linked circles in source pixels; review their placement before scoring."
+}

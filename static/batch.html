@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Three Chamber · Analysis workspace</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/batch.css"></head>
+<body class="batch-body"><a class="skip-link" href="#workspace-main">Skip to workspace</a><main id="workspace-main">
+<header><a class="brand" href="/"><span class="brand-icon">Ⅲ</span><span>Three Chamber<small>ANALYSIS WORKSPACE</small></span></a><span class="local-label">Local video analysis</span></header>
+<div id="batch-notice" role="status" aria-live="polite"></div>
+<nav class="batch-steps" aria-label="Analysis steps"><button data-step="videos">1 · Videos</button><button data-step="regions">2 · Review regions</button><button data-step="results">3 · Results</button></nav>
+<section id="batch-videos" aria-labelledby="videos-heading">
+<div class="title-row"><div><div class="step">STEP 1 · VIDEOS</div><h1 id="videos-heading" tabindex="-1">Start with your recordings.</h1><p>Add one video or a whole batch. Review the regions, then analyze the first 10 minutes.</p></div></div>
+<div class="panel upload-zone"><label class="button primary">Add videos<input id="batch-upload" class="visually-hidden" type="file" multiple accept=".mp4,.avi,.mov,.m4v,.mkv"></label><p id="upload-status">Choose one or more EthoVision recordings. Videos stay on this computer.</p></div>
+<div class="panel"><div class="section-heading"><h2>Selected recordings</h2><span id="selected-count"></span></div><div id="batch-queue"></div><div class="step-footer"><p>Each recording will have its own ID and reviewed regions.</p><button class="primary" id="review-regions">Review regions →</button></div></div>
+<details id="workspace-library" class="panel"><summary>Add recordings already in this workspace</summary><div class="section-heading"><h2>Available recordings</h2><button id="add-all">Add all</button></div><div id="available-videos"></div></details>
+</section>
+<section id="batch-regions" hidden aria-labelledby="regions-heading">
+<div class="title-row"><div><div class="step">STEP 2 · REGIONS</div><h1 id="regions-heading" tabindex="-1">Place once. Measure consistently.</h1><p>Use matching circles around the cups. Check the chamber boundaries in each recording.</p></div></div>
+<div class="batch-editor"><div class="panel arena-editor">
+<label>Recording<select id="batch-recording"></select></label>
+<div class="pair recording-fields"><label>Recording ID<input id="batch-recording-id"></label><label>Social / novel cup<select id="batch-target"><option value="unspecified">Unspecified</option><option value="left">Left</option><option value="right">Right</option></select></label></div>
+<div class="toolbar" aria-label="Regions to adjust"><button id="edit-circles" class="active" aria-pressed="true">Cup circles</button><button id="edit-floor" aria-pressed="false">Chamber boundaries</button></div>
+<p id="batch-draw-help">Drag a circle to move it. Drag either square handle to resize both.</p>
+<canvas id="batch-canvas" aria-label="Arena and linked cup circles. Use precise placement below as a keyboard alternative."></canvas>
+<div class="shared-controls"><label>Circle diameter · all recordings<input id="batch-diameter" type="number" min="4" max="500" step="1" aria-describedby="diameter-help"></label><input aria-label="Shared circle diameter slider" id="batch-diameter-slider" type="range" min="4" max="500" step="1"></div>
+<p id="diameter-help" class="control-help">Diameter is in video pixels. Resizing changes both circles in every recording and resets their review status.</p>
+<details><summary>Precise placement & reference image</summary>
+<div class="pair"><label>Left cup center x<input id="batch-left-x" type="number" step=".1"></label><label>Left cup center y<input id="batch-left-y" type="number" step=".1"></label><label>Right cup center x<input id="batch-right-x" type="number" step=".1"></label><label>Right cup center y<input id="batch-right-y" type="number" step=".1"></label></div>
+<div class="pair"><label>Left divider (% of floor width)<input id="batch-divider-left" type="number" min="0" max="100" step=".1"></label><label>Right divider (% of floor width)<input id="batch-divider-right" type="number" min="0" max="100" step=".1"></label></div>
+<label>Floor corners (x,y per line)<textarea id="batch-floor-points" rows="4"></textarea></label><button id="apply-batch-floor">Apply floor corners</button>
+<div class="reference-controls"><label>Reference frame<input id="batch-frame" type="number" min="0" step="1" value="1237"></label><button id="batch-load-frame">Load frame</button></div>
+</details>
+<p id="entry-status" role="status"></p><div class="step-footer"><button id="previous-recording">← Previous</button><button id="confirm-recording" class="primary">Confirm & next →</button></div>
+</div>
+<div class="panel batch-checklist"><h2>Ready to analyze</h2><div id="review-queue"></div><p id="review-count"></p><button id="start-batch" class="primary wide" disabled>Analyze recordings →</button><p id="analysis-help">Confirm the regions in every recording to continue.</p>
+<div class="analysis-includes"><h3>Included automatically</h3><p>First 10 minutes · nose and body-center tracking · cup-zone and chamber times · Excel table · annotated videos</p></div>
+<details><summary>Advanced tracking settings</summary><label>Likelihood cutoff<input id="batch-cutoff" type="number" min="0" max="1" step=".05"></label><p>Changing this threshold resets every region review. Low-confidence landmarks remain unscored.</p></details>
+</div></div></section>
+<section id="batch-results" hidden aria-labelledby="results-heading">
+<div class="title-row"><div><div class="step">STEP 3 · RESULTS</div><h1 id="results-heading" tabindex="-1">Review your measurements.</h1><p>Download the combined table and check each recording’s annotated video.</p></div><button data-step="videos">Back to recordings</button></div>
+<div id="batch-progress" class="panel" role="status" aria-live="polite" hidden></div><div id="batch-results-list"></div><div class="panel"><h2>Analysis history</h2><div id="batch-history"></div></div>
+</section>
+<footer class="workspace-footer"><span>Three Chamber · nose-in-circle time and body-center occupancy</span><details><summary>Model tools</summary><a href="/labeling">Review training labels</a><a href="/reports/specialized_results.html">Tracking assessment</a></details></footer>
+</main><script src="/static/geometry.js"></script><script src="/static/batch.js"></script></body></html>

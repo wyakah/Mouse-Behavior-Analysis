@@ -1,0 +1,9 @@
+av>=14,<19
+Flask>=3.1,<4
+numpy>=2,<3
+opencv-python-headless>=4.10,<6
+pandas>=2.2,<4
+PyYAML>=6,<7
+pytest>=8,<10
+imageio-ffmpeg>=0.6,<1
+tables>=3.10,<4

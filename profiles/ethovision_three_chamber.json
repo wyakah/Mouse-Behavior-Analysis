@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "EthoVision three-chamber 1024x768",
+  "source_size": [
+    1024,
+    768
+  ],
+  "crop_xyxy": [
+    190,
+    175,
+    750,
+    575
+  ],
+  "expected_arena_xyxy": [
+    193,
+    190,
+    735,
+    558
+  ],
+  "alignment_review_required": true,
+  "max_candidates": 5,
+  "detector_score_threshold": 0.2,
+  "minimum_pose_quality": 0.55,
+  "minimum_candidate_margin": 0.08,
+  "continuity_reset_seconds": 0.25,
+  "maximum_speed_px_s": 1600,
+  "minimum_body_length_px": 10,
+  "maximum_body_length_px": 130,
+  "notes": "Provisional geometry for the supplied camera. Validate placement per recording. No physical dimensions assumed; cups and their interaction zones remain visible. Temporal selection uses actual timestamps and resets across sampled stills. Detector threshold 0.2 expands candidate search; this is experimental and requires manual accuracy validation."
+}
