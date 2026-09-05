@@ -12,48 +12,46 @@ function action(id, fn) { $(id).addEventListener('click', async () => { try { aw
 function option(value, text) { const el = document.createElement('option'); el.value = value; el.textContent = text; return el; }
 function fmt(n) { return n == null ? '—' : Number(n).toFixed(3); }
 function markDirty() { dirty = true; $('save-state').textContent = 'Unsaved changes'; }
-async function inventory() {
-  const videos = await api('/api/videos');
-  $('video-choice').replaceChildren(option('', 'Choose a recording'));
-  videos.filter(v => !v.prepared).forEach(v => $('video-choice').append(option(v.name, v.name)));
-  const saved = await api('/api/stereotypy/sessions');
-  $('sessions').replaceChildren(option('', 'Choose a session'));
-  saved.forEach(s => $('sessions').append(option(s.id, `${s.animal_id} · ${s.session_id} · ${s.apparatus_id}`)));
-  if (session) $('sessions').value = session.id;
+let queue={entries:[]},setupView,currentIndex=0,preparing=false,queueSave=Promise.resolve();
+function saveQueue(){const snapshot=structuredClone(queue);queueSave=queueSave.catch(()=>{}).then(()=>api('/api/stereotypy/draft',snapshot));return queueSave;}
+function showView(name){if((dirty||busy||preparing)&&name==='setup')throw Error('Save your changes before returning to videos.');for(const id of ['setup','review','stereo-results'])$(id).hidden=id!==name;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));player.pause();window.scrollTo(0,0);}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{try{showView(b.dataset.view);}catch(e){notice(e.message,true);}});
+async function inventory(){
+ const [videos,saved]=await Promise.all([api('/api/videos'),api('/api/stereotypy/sessions')]);
+ setupView?.setAvailable(videos.filter(v=>!v.prepared));
+ $('sessions').replaceChildren(option('','Choose a recording'));saved.forEach(s=>$('sessions').append(option(s.id,`${s.animal_id} · ${s.sex||'not recorded'} · ${s.genotype||'genotype not recorded'}`)));
+ if(session)$('sessions').value=session.id;
 }
-$('upload').addEventListener('change', async event => {
-  try {
-    for (const file of event.target.files) {
-      notice(`Adding ${file.name} locally…`);
-      const form = new FormData(); form.append('file', file);
-      const response = await fetch('/api/videos/upload', {method:'POST', body:form});
-      const result = await response.json(); if (!response.ok) throw new Error(result.error);
-    }
-    await inventory(); notice('Recordings added. Choose one and enter anonymous IDs.');
-  } catch (e) { notice(e.message, true); }
-});
-action('create', async () => {
-  if (dirty) throw new Error('Save the current revision before opening another recording.');
-  $('create').disabled = true;
-  try {
-    let job = await api('/api/stereotypy/sessions', {video:$('video-choice').value, animal_id:$('animal-id').value, session_id:$('session-id').value, apparatus_id:$('apparatus-id').value, view_confirmed:$('side-view').checked});
-    while (job.status === 'queued' || job.status === 'running') {
-      notice(job.message); await new Promise(resolve => setTimeout(resolve, 1000)); job = await api(`/api/jobs/${job.id}`);
-    }
-    if (job.status !== 'complete') throw new Error(job.message);
-    await inventory(); await load(job.session_id); notice('Source timing checked. All behaviors start unreviewed.');
-  } finally { $('create').disabled = false; }
-});
+async function prepareEntry(index){
+ if(dirty||busy||preparing)throw Error('Save the current revision before changing recordings.');
+ if(!queue.entries[index])return;
+ const entry=queue.entries[index];preparing=true;setupView.render();$('queue-recording').disabled=true;$('next-recording').disabled=true;
+ try{
+  await api('/api/stereotypy/setup',{entries:queue.entries});
+  await saveQueue();
+  if(entry.session_ref){await api(`/api/stereotypy/sessions/${entry.session_ref}/metadata`,{animal_id:entry.id,sex:entry.sex,genotype:entry.genotype});}
+  else{
+   let job=await api('/api/stereotypy/sessions',{video:entry.video,animal_id:entry.id,sex:entry.sex,genotype:entry.genotype,view_confirmed:$('side-view').checked});
+   while(['queued','running'].includes(job.status)){notice(`${entry.id}: ${job.message}`);await new Promise(resolve=>setTimeout(resolve,1000));job=await api(`/api/jobs/${job.id}`);}
+   if(job.status!=='complete')throw Error(job.message);entry.session_ref=job.session_id;await saveQueue();
+  }
+  currentIndex=index;await inventory();await load(entry.session_ref);notice('Ready to review. Unmarked time stays unreviewed.');
+ }finally{preparing=false;setupView.render();$('queue-recording').disabled=false;$('next-recording').disabled=currentIndex>=queue.entries.length-1;}
+}
+$('queue-recording').onchange=async e=>{try{await prepareEntry(Number(e.target.value));}catch(error){e.target.value=currentIndex;notice(error.message,true);}};
+action('next-recording',()=>prepareEntry(currentIndex+1));
 $('sessions').addEventListener('change', async () => {
   try {
-    if (dirty || busy) { $('sessions').value = session?.id || ''; throw new Error('Save the current revision before changing sessions.'); }
+    if (dirty || busy || preparing) { $('sessions').value = session?.id || ''; throw new Error('Save the current revision before changing sessions.'); }
     if ($('sessions').value) await load($('sessions').value);
   } catch (e) { notice(e.message, true); }
 });
 async function load(id) {
   session = await api(`/api/stereotypy/sessions/${id}`); rows = structuredClone(session.annotations); undo = []; dirty = false; editing = null; exact = null;
   $('review').hidden = false; $('sessions').value = id;
-  $('session-title').textContent = `${session.animal_id} · ${session.session_id}`;
+  $('session-title').textContent = [session.animal_id,session.sex||'Sex not recorded',session.genotype||'Genotype not recorded'].join(' · ');
+  $('queue-recording').replaceChildren(...queue.entries.map((e,i)=>option(i,e.id)));const index=queue.entries.findIndex(e=>e.session_ref===id);if(index>=0){currentIndex=index;$('queue-recording').value=index;}else{$('queue-recording').append(option('saved',session.animal_id));$('queue-recording').value='saved';}
+  $('next-recording').disabled=index<0||index>=queue.entries.length-1;document.querySelectorAll('[data-view]').forEach(b=>b.disabled=false);showView('review');
   player.src = `/api/video?video=${encodeURIComponent(session.video)}`; $('exact-frame').hidden = true;
   $('behavior').replaceChildren(...session.summary.map(r => option(r.behavior, r.behavior.replaceAll('_', ' '))));
   $('window-start').value = session.start_s; $('window-end').value = session.end_s; $('merge-gap').value = session.merge_gap_s;
@@ -154,4 +152,10 @@ action('export', async () => {
   const url = URL.createObjectURL(await response.blob()); const a = document.createElement('a'); a.href = url; a.download = `stereotypy-${session.id.slice(0,8)}-r${session.revision}.zip`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 30000); notice('Export saved with source timing and revision history.');
 });
 window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
-inventory().catch(e => notice(e.message, true));
+(async()=>{
+ queue=await api('/api/stereotypy/draft');$('side-view').checked=queue.view_confirmed===true;
+ setupView=new RecordingSetup($('recording-setup'),{entries:()=>queue.entries,disabled:()=>preparing||busy,change:()=>saveQueue(),seed:async video=>({video,id:video.split('/').pop().replace(/^[a-f0-9]{8}_/,'').replace(/\.[^.]+$/,'').split('_')[0]}),continue:async()=>{if(!$('side-view').checked)throw Error('Confirm that each video shows one mouse from the side.');await prepareEntry(0);}});
+ $('recording-setup').querySelector('.recording-next').before($('stereo-view-check'));
+ $('side-view').onchange=()=>{queue.view_confirmed=$('side-view').checked;saveQueue().catch(e=>notice(e.message,true));};
+ await inventory();
+})().catch(e=>notice(e.message,true));

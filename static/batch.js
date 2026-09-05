@@ -3,6 +3,7 @@ let draft={entries:[],diameter_px:110,pcutoff:.6},profile,available=[],current=0
 const entry=()=>draft.entries[current];
 const validSampleIds=()=>draft.entries.every(e=>String(e.id||'').trim())&&new Set(draft.entries.map(e=>String(e.id||'').trim())).size===draft.entries.length;
 const liveView=new LiveAnalysisView($('#live-analysis'));
+let setupView;
 let activeJob=null,watchTimer=null,watchGeneration=0,statusRequest=null,resultBatchId=null,resultCards=new Map();
 liveView.onViewResult=async(id,run)=>{await watch(id);document.getElementById('result-'+run)?.scrollIntoView({block:'start',behavior:'smooth'});};
 function notice(text,error=false){$('#batch-notice').textContent=text;$('#batch-notice').className=error?'error':'';}
@@ -21,29 +22,15 @@ function save(){clearTimeout(saveTimer);const snapshot=JSON.parse(JSON.stringify
 function changed(all=false){if(all)draft.entries.forEach(e=>e.reviewed=false);else if(entry())entry().reviewed=false;renderLists();clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(e=>notice(e.message,true)),300);}
 function renderLists(){
  const select=$('#batch-recording');select.replaceChildren();draft.entries.forEach((e,i)=>select.add(new Option(`${i+1}. ${e.id} · ${e.reviewed?'reviewed':'needs review'}`,i)));select.value=current;
- for(const name of ['batch-queue','review-queue']){
-  const container=$('#'+name);container.replaceChildren();
-  if(!draft.entries.length)container.append(el('p','No videos selected. Add videos above or choose from this workspace.'));
-  draft.entries.forEach((e,i)=>{
-   const row=el('div',null,'batch-row'),span=el('span',`${e.reviewed?'✓':'○'} ${e.id}`,e.reviewed?'completed':'');
-   if(name==='batch-queue'){span.replaceChildren();const fields=el('div',null,'sample-fields');for(const [key,label] of [['id','Sample ID'],['sex','Sex'],['genotype','Genotype']]){const wrapper=el('label',label),input=el(key==='sex'?'select':'input');input.setAttribute('aria-label',`${label} for recording ${i+1}`);if(key==='sex'){for(const [v,t] of [['unknown','Not recorded'],['female','Female'],['male','Male']])input.add(new Option(t,v));}else{input.maxLength=key==='genotype'?120:120;if(key==='genotype'){input.setAttribute('list','genotype-options');input.placeholder='Not recorded';}}input.value=e[key]||(key==='sex'?'unknown':'');input.oninput=()=>{e[key]=input.value;metadataChanged();};wrapper.append(input);fields.append(wrapper);}span.append(fields,el('small',e.video.split('/').pop()));}
-   const b=el('button',e.reviewed?'Edit':'Review');b.setAttribute('aria-label',`${e.reviewed?'Edit':'Review'} regions for ${e.id}`);
-   b.onclick=()=>{current=i;step('regions',true);};row.append(span,b);
-   if(name==='batch-queue'){
-    const remove=el('button','Remove');remove.setAttribute('aria-label',`Remove ${e.id}`);remove.disabled=busy||adding;
-    remove.onclick=guard(async()=>{draft.entries.splice(i,1);current=Math.min(current,Math.max(0,draft.entries.length-1));renderLists();renderAvailable();if(entry())loadEntry();await save();});row.append(remove);
-   }
-   container.append(row);
-  });
- }
+ setupView?.render();
+ const container=$('#review-queue');container.replaceChildren();
+ draft.entries.forEach((e,i)=>{const row=el('div',null,'batch-row'),button=el('button',e.reviewed?'Edit':'Review');button.onclick=()=>{current=i;step('regions',true);};row.append(el('span',`${e.reviewed?'✓':'○'} ${e.id}`),button);container.append(row);});
  renderMetadataSummary();
  const count=draft.entries.filter(e=>e.reviewed).length,total=draft.entries.length;
- $('#selected-count').textContent=`${total} recording${total===1?'':'s'}`;
  $('#review-count').textContent=`${count} of ${total} recordings reviewed`;
  $('#start-batch').disabled=busy||adding||!total||count!==total||!validSampleIds();
  $('#start-batch').textContent=busy?'Analysis in progress…':`Analyze ${total===1?'recording':total+' recordings'} →`;
  $('#analysis-help').textContent=busy?'Open Results to follow progress.':!validSampleIds()?'Give every mouse a unique, nonempty sample ID.':count===total&&total?'Ready. Tracking and scoring will run automatically.':'Confirm the regions in every recording to continue.';
- $('#review-regions').disabled=adding||!total;
  $('#previous-recording').disabled=current===0;
  $('#confirm-recording').textContent=current<total-1?'Confirm & next →':'Confirm regions ✓';
  $('#entry-status').textContent=entry()?.reviewed?'Regions confirmed for this recording.':'Check both circles and the chamber boundaries, then confirm.';
@@ -52,10 +39,8 @@ const modeHelp={descriptive:'Group size, mean, standard deviation, and 95% confi
 function metadataChanged(){renderMetadataSummary();clearTimeout(saveTimer);saveTimer=setTimeout(()=>save().catch(e=>notice(e.message,true)),400);}
 function renderMetadataSummary(){
  const es=draft.entries,genotypes=[...new Set(es.map(e=>(e.genotype||'').trim()).filter(Boolean))];
- $('#cohort-summary').textContent=`${es.length} independent mice · ${genotypes.length} genotype${genotypes.length===1?'':'s'} · ${es.filter(e=>e.sex==='female').length} female · ${es.filter(e=>e.sex==='male').length} male`;
- $('#genotype-options').replaceChildren(...genotypes.map(g=>new Option(g,g)));
  $('#resume-draft').hidden=!es.length;$('#resume-description').textContent=`Three Chamber · ${es.length} recording${es.length===1?'':'s'} in your saved setup`;
- $('#start-batch').disabled=busy||adding||!es.length||!validSampleIds()||es.some(e=>!e.reviewed);if(!validSampleIds())$('#cohort-summary').textContent+=' · Enter a unique ID for each mouse';
+ $('#start-batch').disabled=busy||adding||!es.length||!validSampleIds()||es.some(e=>!e.reviewed);
  const plan=draft.statistics;if(!plan)return;
  $('#statistics-method').textContent=modeHelp[plan.mode];
  const missingG=es.filter(e=>!(e.genotype||'').trim()).length,missingS=es.filter(e=>!e.sex||e.sex==='unknown').length,missingTarget=es.filter(e=>!['left','right'].includes(e.config.target_side)).length;
@@ -69,7 +54,6 @@ function initStatistics(options){
  $('#statistics-mode').onchange=e=>{plan.mode=e.target.value;metadataChanged();};$('#statistics-alpha').onchange=e=>{plan.alpha=Number(e.target.value);metadataChanged();};
 }
 $('#choose-three-chamber').onclick=guard(async()=>{draft.test_id='three_chamber';await save();step('videos',true);});
-$('#apply-metadata').onclick=guard(async()=>{const sex=$('#fill-sex').value,genotype=$('#fill-genotype').value.trim();let count=0;for(const e of draft.entries){let updated=false;if(sex&&(!e.sex||e.sex==='unknown')){e.sex=sex;updated=true;}if(genotype&&!(e.genotype||'').trim()){e.genotype=genotype;updated=true;}if(updated)count++;}renderLists();await save();notice(`Updated missing metadata for ${count} recording${count===1?'':'s'}.`);});
 function filterResults(){const term=$('#results-filter').value.trim().toLowerCase();for(const c of resultCards.values()){c.hidden=['male','female','unknown'].includes(term)?c.dataset.sex!==term:!c.dataset.search.includes(term);if(c.hidden)c.querySelectorAll('video').forEach(v=>v.pause());}}
 $('#results-filter').oninput=filterResults;
 document.addEventListener('play',event=>{if(event.target.tagName==='VIDEO')document.querySelectorAll('video').forEach(v=>{if(v!==event.target)v.pause();});},true);
@@ -79,7 +63,7 @@ function loadEntry(){if(!entry())return;frameReady=false;$('#confirm-recording')
 function resize(value){if(busy)return;const d=Number(value);if(!Number.isFinite(d)||d<4||d>500||d===draft.diameter_px)return;draft.diameter_px=d;draft.entries.forEach(e=>e.config.cup_circles.diameter_px=d);$('#batch-diameter').value=d;$('#batch-diameter-slider').value=d;changed(true);draw();}
 $('#batch-diameter').oninput=e=>resize(e.target.value);$('#batch-diameter-slider').oninput=e=>resize(e.target.value);
 $('#batch-cutoff').oninput=e=>{draft.pcutoff=Number(e.target.value);draft.entries.forEach(e=>e.config.pcutoff=draft.pcutoff);changed(true);};
-$('#batch-recording').onchange=e=>{current=Number(e.target.value);loadEntry();};$('#review-regions').onclick=()=>step('regions',true);
+$('#batch-recording').onchange=e=>{current=Number(e.target.value);loadEntry();};
 $('#batch-target').onchange=e=>{entry().config.target_side=e.target.value;changed();};
 for(const side of ['left','right'])for(const [i,axis] of ['x','y'].entries())$('#batch-'+side+'-'+axis).oninput=e=>{entry().config.cup_circles[side][i]=Number(e.target.value);changed();draw();};
 for(const [i,side] of ['left','right'].entries())$('#batch-divider-'+side).oninput=e=>{entry().config.dividers_fraction[i]=Number(e.target.value)/100;changed();draw();};
@@ -108,31 +92,7 @@ $('#confirm-recording').onclick=guard(async()=>{
   else notice('Regions confirmed. Review the next recording.');
  }finally{$('#confirm-recording').disabled=!frameReady;}
 });
-async function addVideo(name){if(draft.entries.some(e=>e.video===name))return;const e=await api('/api/batch/seed',{video:name});let id=e.id,number=2;while(draft.entries.some(e=>e.id===id))id=e.id+'-'+number++;e.id=id;e.sex='unknown';e.genotype='';e.config.cup_circles.diameter_px=draft.diameter_px;e.config.pcutoff=draft.pcutoff;draft.entries.push(e);renderLists();renderAvailable();await save();}
-function workspaceChoices(){return available.filter(v=>!v.prepared).map(v=>({source:v,working:available.find(p=>p.prepared&&p.name.split('/').pop().startsWith(v.name.split('/').pop().replace(/\.[^.]+$/,'')+'__'))||v}));}
-function renderAvailable(){
- const box=$('#available-videos');box.replaceChildren();const choices=workspaceChoices();
- let remaining=0;for(const {source,working} of choices){
-  const added=draft.entries.some(e=>e.video===working.name||e.video===source.name);if(!added)remaining++;
-  const row=el('div',null,'batch-row'),button=el('button',added?'Added':'Add');button.disabled=added||adding;
-  button.onclick=guard(async()=>{await addVideo(working.name);if(draft.entries.length===1)loadEntry();notice('Recording added.');});row.append(el('span',source.name.split('/').pop()),button);box.append(row);
- }
- if(!choices.length)box.append(el('p','No other recordings in this workspace. Use Add videos above.'));
- $('#add-all').disabled=adding||!remaining;
-}
-$('#add-all').onclick=guard(async()=>{adding=true;renderLists();renderAvailable();try{for(const {working} of workspaceChoices())await addVideo(working.name);if(entry())loadEntry();notice('Recordings added. Add sample details, then review regions.');}finally{adding=false;renderLists();renderAvailable();}});
-$('#batch-upload').onchange=guard(async e=>{
- const files=[...e.target.files];if(!files.length)return;adding=true;e.target.disabled=true;renderLists();renderAvailable();let added=0;const failures=[];
- try{
-  for(let i=0;i<files.length;i++){
-   const f=files[i];$('#upload-status').textContent=`Adding ${i+1}/${files.length}: ${f.name}`;
-   try{const data=new FormData();data.append('file',f);const r=await fetch('/api/videos/upload',{method:'POST',body:data});const d=await r.json();if(!r.ok)throw Error(d.error);await addVideo(d.name);added++;}catch(error){failures.push(`${f.name}: ${error.message}`);}
-  }
-  available=await api('/api/videos');if(entry())loadEntry();
-  $('#upload-status').textContent=`${added} recording${added===1?'':'s'} added. ${failures.length?failures.length+' could not be added.':'Add sample details, then review regions.'}`;
-  if(failures.length)notice(failures.join(' · '),true);else notice('Videos added. Add sample details and choose your Excel comparisons.');
- }finally{adding=false;e.target.disabled=false;e.target.value='';renderLists();renderAvailable();}
-});
+function workspaceChoices(){return available.filter(v=>!v.prepared).map(v=>{const working=available.find(p=>p.prepared&&p.name.split('/').pop().startsWith(v.name.split('/').pop().replace(/\.[^.]+$/,'')+'__'))||v;return {name:working.name,label:v.name.split('/').pop()};});}
 function link(text,url){const a=el('a',text);a.href=url;return a;}
 function renderJob(b){
  const running=['queued','running'].includes(b.status),panel=$('#batch-progress');panel.hidden=running;panel.replaceChildren();
@@ -195,7 +155,7 @@ async function historyList(){
 }
 guard(async()=>{
  let options;[draft,profile,available,options]=await Promise.all([api('/api/batch/draft'),api('/api/profile'),api('/api/videos'),api('/api/statistics/options')]);draft.test_id='three_chamber';draft.statistics={...options.defaults,...draft.statistics};initStatistics(options);
- renderAvailable();renderLists();if(!entry())$('#workspace-library').open=true;
+ setupView=new RecordingSetup($('#recording-setup'),{entries:()=>draft.entries,disabled:()=>busy,busy:value=>{adding=value;},change:()=>{current=Math.min(current,Math.max(0,draft.entries.length-1));metadataChanged();return save();},seed:async video=>{const e=await api('/api/batch/seed',{video});e.config.cup_circles.diameter_px=draft.diameter_px;e.config.pcutoff=draft.pcutoff;return e;},continue:async()=>{await save();step('regions',true);}});setupView.setAvailable(workspaceChoices());renderLists();
  const old={inspect:'videos',calibrate:'regions',analysis:'regions',tracking:'regions'},requested=location.hash.slice(1);step(old[requested]||requested||'tests');
  const list=await historyList();const active=list.find(b=>['running','queued'].includes(b.status));
  if(active){activeJob=active.id;job=active.id;liveView.updateBatch(active);if(!requested)step('results');await watch(active.id);}

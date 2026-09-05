@@ -6,6 +6,7 @@ import json, os, subprocess, uuid, re, shutil, time
 from flask import request,jsonify,send_from_directory
 from threechamber.core import analysis_geometry,metadata,analyze,sha256,propose_circles
 from threechamber.preparation import prepare_trial
+from threechamber.recordings import validate_recordings
 from threechamber.live import LivePublisher,atomic_json
 from threechamber.statistics import settings as statistics_settings, sample_metadata, analyze_statistics, METRICS
 
@@ -26,7 +27,7 @@ def validate_batch(root,draft):
     test_id=draft.get('test_id','three_chamber')
     if test_id!='three_chamber':raise ValueError('Automatic batch analysis is not available for this test. Select Three Chamber, or open the Stereotypy manual-scoring workspace.')
     plan=statistics_settings(draft.get('statistics'))
-    entries=draft.get('entries',[])
+    entries=validate_recordings(draft.get('entries',[]),require_ids=True)
     if not isinstance(entries,list) or not entries:raise ValueError('Add recordings to the batch first.')
     try:diameter=float(draft['diameter_px']);cutoff=float(draft.get('pcutoff',.6))
     except (KeyError,TypeError,ValueError) as e:raise ValueError('Set the shared diameter and likelihood cutoff.') from e
@@ -164,7 +165,7 @@ def register_batch(app,root_fn,pool):
         if request.method=='POST':
             data=request.get_json()
             if not isinstance(data,dict) or not isinstance(data.get('entries'),list):raise ValueError('Invalid batch draft.')
-            save_json(p,data);return jsonify(saved=True)
+            validate_recordings(data['entries']);save_json(p,data);return jsonify(saved=True)
         return jsonify(json.loads(p.read_text()) if p.exists() else dict(test_id='three_chamber',statistics=statistics_settings(),diameter_px=110,pcutoff=.6,entries=[]))
     @app.post('/api/batch/seed')
     def batch_seed():

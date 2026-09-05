@@ -13,6 +13,9 @@ from importlib.metadata import version
 
 from flask import jsonify, request, send_file, abort
 from threechamber.core import sha256
+from threechamber.statistics import sample_metadata
+from threechamber.recordings import validate_recordings
+from threechamber.batch import save_json
 from .core import BEHAVIORS, LABELS, ETHOGRAM_VERSION, number, validate_annotations, measure
 from .video import index_video
 
@@ -84,8 +87,10 @@ def register_stereotypy(app, root_getter, pool, jobs):
         result = {}
         for key in ("animal_id", "session_id", "apparatus_id"):
             value = data.get(key)
+            if key == "session_id" and not value: value = "session-" + uuid.uuid4().hex[:8]
+            if key == "apparatus_id" and not value: value = "Not recorded"
             if not isinstance(value, str) or not value.strip() or len(value.strip()) > 100:
-                raise ValueError("Enter anonymous animal, session, and apparatus IDs (1–100 characters each).")
+                raise ValueError("Enter a mouse ID (1–100 characters).")
             result[key] = value.strip()
         return result
 
@@ -110,18 +115,44 @@ def register_stereotypy(app, root_getter, pool, jobs):
     def stereotypy_page():
         return app.send_static_file("stereotypy.html")
 
+    @app.route("/api/stereotypy/draft", methods=["GET", "POST"])
+    def recording_draft():
+        path=root()/"batches/stereotypy-draft.json"
+        if request.method=="POST":
+            data=payload();validate_recordings(data.get("entries"));save_json(path,data)
+            return jsonify(saved=True)
+        return jsonify(json.loads(path.read_text()) if path.exists() else dict(entries=[]))
+
+    @app.post("/api/stereotypy/setup")
+    def validate_setup():
+        data=payload();validate_recordings(data.get("entries"),require_ids=True)
+        for entry in data['entries']:source(entry['video'])
+        return jsonify(valid=True)
+
+    @app.post("/api/stereotypy/sessions/<sid>/metadata")
+    def update_metadata(sid):
+        data=payload()
+        with lock:
+            record=load(sid);check_source(record)
+            values=identifiers(dict(record,animal_id=data.get('animal_id'))) | sample_metadata(data)
+            before={key:record.get(key) for key in values}
+            if before!=values:
+                history=record.setdefault('metadata_history',[dict(changed_at=record['created_at'],**before)])
+                history.append(dict(changed_at=utc_now(),**values));record.update(values);save(record)
+        return jsonify(saved=True)
+
     @app.get("/api/stereotypy/sessions")
     def sessions():
         records = []
         for path in sorted(folder().glob("*.json")):
             r = json.loads(path.read_text())
-            records.append({k: r[k] for k in ("id", "animal_id", "session_id", "apparatus_id", "video", "created_at")})
+            records.append({k: r.get(k) for k in ("id", "animal_id", "sex", "genotype", "session_id", "apparatus_id", "video", "created_at")})
         return jsonify(records)
 
     @app.post("/api/stereotypy/sessions")
     def create_session():
         data = payload()
-        ids = identifiers(data)
+        ids = identifiers(data) | sample_metadata(data)
         path = source(data.get("video"))
         workspace = root()
         if data.get("view_confirmed") is not True:
@@ -136,6 +167,7 @@ def register_stereotypy(app, root_getter, pool, jobs):
                 # Never apply the three-chamber ten-minute truncation.
                 record = dict(id=sid, video=str(path.relative_to(workspace)), **ids,
                               view="side", created_at=utc_now(), video_manifest=info,
+                              metadata_history=[dict(changed_at=utc_now(), **ids)],
                               start_s=0, end_s=info["duration_s"], merge_gap_s=0,
                               ethogram_version=ETHOGRAM_VERSION, ethogram_status="draft",
                               definitions=dict(BEHAVIORS),
@@ -215,6 +247,7 @@ def register_stereotypy(app, root_getter, pool, jobs):
                                    record["video_manifest"]["source_gaps"], record["merge_gap_s"])
         run_id = uuid.uuid4().hex
         provenance = dict(video_id=sid, animal_id=record["animal_id"], session_id=record["session_id"],
+                          sex=record.get("sex", "unknown"), genotype=record.get("genotype", ""),
                           annotation_revision=current["revision"], annotator_id=current["annotator_id"],
                           ethogram_version=record["ethogram_version"], run_id=run_id, model_id=None)
         summaries = [provenance | r for r in summaries]

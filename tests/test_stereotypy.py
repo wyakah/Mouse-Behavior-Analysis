@@ -207,3 +207,27 @@ def test_window_cannot_silently_discard_annotations(client):
     response = c.post(url, json=dict(revision=0, annotator_id="WW", start_s=.1, end_s=.4, annotations=[row(0, .2)]))
     assert response.status_code == 400
     assert c.get(url).json["revision"] == 0
+
+
+def test_queue_limit_metadata_defaults_and_export(client):
+    c,root=client
+    for i in range(20):(root/f'clip{i}.mp4').write_bytes((root/'tiny.mp4').read_bytes())
+    rows=[dict(id=f'M{i}',video=f'clip{i}.mp4',sex='female',genotype='WT') for i in range(20)]
+    assert c.post('/api/stereotypy/draft',json={'entries':rows}).status_code==200
+    assert len(c.get('/api/stereotypy/draft').json['entries'])==20
+    assert c.post('/api/stereotypy/draft',json={'entries':rows+[rows[0]]}).status_code==400
+    assert c.post('/api/stereotypy/setup',json={'entries':rows}).status_code==200
+    response=c.post('/api/stereotypy/sessions',json=dict(video='tiny.mp4',animal_id='M01',sex='female',genotype='WT',view_confirmed=True))
+    assert response.status_code==202
+    sid=response.json['session_id'];url='/api/stereotypy/sessions/'+sid
+    record=c.get(url).json
+    assert record['sex']=='female' and record['genotype']=='WT'
+    assert record['apparatus_id']=='Not recorded'
+    assert c.post(url+'/metadata',json={'animal_id':'M01','sex':'female','genotype':'KO'}).status_code==200
+    record=c.get(url).json
+    assert record['genotype']=='KO' and record['revision']==0
+    assert [r['genotype'] for r in record['metadata_history']]==['WT','KO']
+    with zipfile.ZipFile(BytesIO(c.post(url+'/export').data)) as archive:
+        row=next(csv.DictReader(StringIO(archive.read('summary.csv').decode())))
+        assert row['animal_id']=='M01' and row['sex']=='female' and row['genotype']=='KO'
+    assert c.post('/api/stereotypy/sessions',json=dict(video='tiny.mp4',animal_id='A',sex='invalid',view_confirmed=True)).status_code==400
