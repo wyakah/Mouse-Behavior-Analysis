@@ -14,6 +14,8 @@ from threechamber.labeling import register_labeling
 register_labeling(app,ROOT)
 from threechamber.batch import register_batch
 register_batch(app,lambda:ROOT,pool)
+from stereotypy.api import register_stereotypy
+register_stereotypy(app,lambda:ROOT,pool,jobs)
 
 def local(value):
     p=(ROOT/value).resolve()

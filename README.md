@@ -120,6 +120,25 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ## Development
 
+### Side-view stereotypy development
+
+The `stereotypy` branch adds a manual side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, and rearing intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic detectors report **model required**. No side-view recognition has been trained or validated.
+
+See [the research, integration plan, milestones, and current limits](docs/stereotypy-research-and-plan.md). Definitions are a draft for lab review. Experimental side-view recordings have not yet been supplied.
+
+For the isolated local development checkout, reuse the existing environment without changing the other app's port:
+
+```bash
+cd /Users/yakahwil/Downloads/Three-Chamber-stereotypy
+PORT=8766 /Users/yakahwil/Downloads/Three-Chamber/.venv/bin/python app.py
+```
+
+Open `http://127.0.0.1:8766/stereotypy`. Add a recording, enter anonymous animal/session/apparatus IDs, and inspect timing. Mark intervals with onset/offset controls (`I` / `O` outside form fields), use source-frame buttons for precise boundaries, enter an annotator ID, and save a revision. Unmarked time stays unreviewed; use **Absent** only after explicitly reviewing that behavior. Exports contain the saved revision and retain earlier history. Media, annotations, and outputs stay local and ignored by Git.
+
+The development preview may contain a video named `SYNTHETIC_timing_demo.mp4` and a `SYNTHETIC` session. These demonstrate software mechanics only; they contain no animal and no scientific observations.
+
+### Checks
+
 ```bash
 .venv/bin/python -m pytest -q
 node --test tests/stream-player.test.cjs

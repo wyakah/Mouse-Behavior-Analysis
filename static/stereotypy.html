@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stereotypy · Side-view scoring</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/stereotypy.css"></head>
+<body><main class="stereo-workspace">
+<header><a class="brand" href="/stereotypy"><span class="brand-icon">S</span><span>Stereotypy<small>SIDE-VIEW BEHAVIOR ANALYSIS</small></span></a><a href="/">Three chamber →</a></header>
+<div class="stereo-intro"><div><div class="step">RESEARCH WORKSPACE</div><h1>Observe. Mark. Measure.</h1><p>Score visible actions in single-mouse side-view recordings. Grooming, digging, and gnawing are measured separately.</p></div><span class="badge">Manual scoring · models needed</span></div>
+<p id="notice" role="status" aria-live="polite">Ready for your example recordings. No automatic behavior detector is installed.</p>
+<section class="panel"><h2>1 · Recordings</h2><p>Add original recordings locally, then inspect their source timing. Each session keeps its own analysis window.</p>
+<div class="stereo-grid"><label>Add recordings<input id="upload" type="file" multiple accept=".mp4,.avi,.mov,.mkv,.m4v"></label><label>Local recording<select id="video-choice"><option value="">Choose a recording</option></select></label><label>Anonymous animal ID<input id="animal-id" placeholder="e.g. M001"></label><label>Session ID<input id="session-id" placeholder="e.g. day01"></label><label>Apparatus ID<input id="apparatus-id" placeholder="e.g. side-cage-A"></label></div>
+<label class="check"><input id="side-view" type="checkbox"> This recording shows one mouse from the side.</label>
+<button id="create" class="primary">Inspect timing & create session</button><label class="saved-sessions">Continue a saved session<select id="sessions"><option value="">Choose a session</option></select></label>
+</section>
+<section id="review" hidden><div class="section-title"><h2>2 · Review behaviors</h2><span id="session-title"></span></div>
+<div class="stereo-editor"><div class="panel">
+<div class="media-stage"><video id="player" controls preload="metadata"></video><img id="exact-frame" alt="Exact decoded source frame" hidden></div>
+<div class="toolbar"><button id="back">← Source frame</button><button id="forward">Source frame →</button><button id="play">Play / pause</button><label>Speed<select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><output id="clock">0.000 s</output></div>
+<label>Source timeline<input id="seek" type="range" min="0" step="1" value="0"></label>
+<div id="timeline" aria-label="Saved and unsaved behavior intervals"></div><p class="hint">Green: present · blue: absent · amber: unobservable/ambiguous · gray: unreviewed. Click a segment to seek.</p>
+<div class="stereo-grid"><label>Window start (s)<input id="window-start" type="number" min="0" step="any"></label><label>Window end (s)<input id="window-end" type="number" min="0" step="any"></label></div>
+<p id="timing-info" class="hint"></p>
+</div><div class="panel"><h3>Mark an interval</h3>
+<label>Behavior<select id="behavior"></select></label><p id="definition"></p><p class="hint">Definitions are a draft for lab review. These actions alone do not establish pathological stereotypy.</p>
+<label>Label<select id="label"><option value="present">Present</option><option value="absent">Absent — explicitly reviewed</option><option value="unobservable">Unobservable</option><option value="ambiguous">Ambiguous</option><option value="unreviewed">Unreviewed</option></select></label>
+<div class="stereo-grid"><label>Onset (s)<input id="onset" type="number" step="any" min="0"></label><label>Exclusive offset (s)<input id="offset" type="number" step="any" min="0"></label></div>
+<div class="toolbar"><button id="mark-start">Mark onset · I</button><button id="mark-end">Mark offset · O</button><button id="include-frame">Offset after frame</button></div>
+<label>Observation / object / uncertainty note<input id="note" placeholder="e.g. mouth hidden behind bedding"></label>
+<div class="toolbar"><button id="add" class="primary">Add interval</button><button id="cancel-edit" hidden>Cancel edit</button><button id="undo" disabled>Undo interval edit</button></div>
+<p class="hint">Unmarked time stays unreviewed for each behavior. Mark absent only after reviewing that behavior. Short actions are retained.</p>
+<label>Annotator ID<input id="annotator" placeholder="Your scoring initials or anonymous ID"></label>
+<label>Merge known-negative gaps up to (s)<input id="merge-gap" type="number" min="0" step="any" value="0"></label><p class="hint">Merged span includes the pause; active seconds exclude it. Unknown gaps always split and censor events.</p>
+<button id="save" class="primary">Save revision</button><p id="save-state"></p>
+</div></div>
+<div class="panel table-wrap"><h3>Annotations</h3><table><thead><tr><th>Behavior</th><th>Label</th><th>Onset</th><th>Offset</th><th>Note</th><th>Actions</th></tr></thead><tbody id="annotations"></tbody></table></div>
+<div class="panel table-wrap"><h2>3 · Measurements & export</h2><p>Measurements below reflect the last saved revision. Percentages use scored time; unknown time remains explicit. Counts are observed segments and may be censored.</p><table><thead><tr><th>Behavior</th><th>Active seconds</th><th>Scored seconds</th><th>Unknown seconds</th><th>% of scored time</th><th>Coverage</th><th>Segments</th><th>Censored</th></tr></thead><tbody id="summary"></tbody></table><button id="export" class="primary">Save & export CSV package</button><p class="hint">Includes summary, intervals, observed segments, source timing, definitions, and revision history. Missing measurements export blank. Automatic predictions: model required.</p></div>
+</section></main><script src="/static/stereotypy.js"></script></body></html>
