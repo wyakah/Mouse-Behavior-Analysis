@@ -1,0 +1,2 @@
+# Add to the existing DeepLabCut environment for buffered annotated video.
+av>=18,<19

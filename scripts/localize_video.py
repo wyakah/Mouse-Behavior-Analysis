@@ -48,7 +48,7 @@ def localize_video(video, output, profile_path, samples=61, live=None):
                 raise ValueError(f'Non-increasing source timestamp at frame {frame_index}.')
             image=frame.to_ndarray(format='bgr24')
             result=localizer.propose(image,timestamp,video.name)
-            if live:live.frame(image,frame_index,timestamp,bbox=result.get('bbox_xyxy'),force=frame_index+1==expected_count)
+            if live:live.frame(image,frame_index,timestamp,bbox=result.get('bbox_xyxy'),force=frame_index+1==expected_count,encode_image=False)
             qc=localization_review_flags(result,profile);step=None;speed=None
             if result['status']=='proposal':
                 xy=np.array(result['support_xy'])

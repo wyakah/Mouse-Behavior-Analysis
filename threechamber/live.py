@@ -96,7 +96,7 @@ class LivePublisher:
     def due(self):
         return not self.disabled and self.clock() - self.last >= self.interval
 
-    def frame(self, image, frame_index, source_time_s, row=None, bbox=None, force=False, image_is_crop=False):
+    def frame(self, image, frame_index, source_time_s, row=None, bbox=None, force=False, image_is_crop=False, encode_image=True):
         if self.disabled or (not force and not self.due()):
             return False
         # Throttle before rendering/encoding so skipped preview frames cost no JPEG work.
@@ -112,16 +112,19 @@ class LivePublisher:
                 if image.shape[:2]!=(y2-y1,x2-x1):raise ValueError('Cropped preview dimensions do not match source crop')
                 tile=image
             else:tile = image[y1:y2, x1:x2]
-            scale = min(1., 960 / max(tile.shape[:2]))
-            if scale < 1:
-                tile = cv2.resize(tile, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-            ok, encoded = cv2.imencode('.jpg', tile, [cv2.IMWRITE_JPEG_QUALITY, 78])
-            if not ok:
-                raise ValueError('Preview encoding failed')
+            encoded_image=None
+            if encode_image:
+                scale = min(1., 960 / max(tile.shape[:2]))
+                if scale < 1:
+                    tile = cv2.resize(tile, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+                ok, encoded = cv2.imencode('.jpg', tile, [cv2.IMWRITE_JPEG_QUALITY, 78])
+                if not ok:
+                    raise ValueError('Preview encoding failed')
+                encoded_image='data:image/jpeg;base64,' + base64.b64encode(encoded).decode('ascii')
             payload = self._base()
             payload.update(frame_index=int(frame_index), frames_done=int(frame_index)+1,
                            source_time_s=float(source_time_s), crop=crop,
-                           image='data:image/jpeg;base64,' + base64.b64encode(encoded).decode('ascii'),
+                           image=encoded_image,
                            landmarks=landmark_states(row or {}, self.context.get('cutoff', .6), width, height),
                            bbox=None if bbox is None else [float(v) for v in bbox])
             if row is not None:

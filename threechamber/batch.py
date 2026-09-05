@@ -110,7 +110,8 @@ def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyze
             context=dict(batch_id=batch['id'],recording_index=i,recording_id=e['id'],recording_count=len(batch['entries']),
                          source_duration_s=min(600,info['duration_seconds']),source_size=[info['width'],info['height']],cutoff=e['config'].get('pcutoff',.6),
                          crop=json.loads((root/'profiles/ethovision_three_chamber.json').read_text())['crop_xyxy'],
-                         geometry={k:e['config'][k] for k in ('arena','dividers_fraction','cup_circles')})
+                         geometry={k:e['config'][k] for k in ('arena','dividers_fraction','cup_circles')},
+                         config=dict(e['config'],review_crop_xyxy=json.loads((root/'profiles/ethovision_three_chamber.json').read_text())['crop_xyxy']))
             live=LivePublisher(folder/'live',context)
             try:atomic_json(live.folder/'context.json',context)
             except OSError:live.disabled=True
@@ -201,6 +202,25 @@ def register_batch(app,root_fn,pool):
         if snapshot and (unchanged or request.args.get('image','1')=='0'):snapshot.pop('image',None)
         response=jsonify(batch_id=identifier,status=batch['status'],snapshot=snapshot,unchanged=unchanged,server_time=time.time())
         response.headers['Cache-Control']='no-store';return response
+    @app.get('/api/batches/<identifier>/video/<int:index>')
+    def batch_video(identifier,index):
+        folder=inside(root_fn(),'batches/'+identifier)
+        if not (folder/'batch.json').is_file():raise ValueError('Batch not found.')
+        batch=current_status(json.loads((folder/'batch.json').read_text()))
+        if not 0<=index<len(batch['entries']):raise ValueError('Recording not found.')
+        try:manifest=json.loads((folder/'live/video'/str(index)/'manifest.json').read_text())
+        except (OSError,ValueError):manifest=None
+        if manifest:
+            manifest['base_url']=f'/batches/{identifier}/video/{index}/'
+            if manifest['status']=='streaming' and batch['status']=='interrupted':
+                manifest.update(status='failed',error='Processing was interrupted. Available preview footage is retained.')
+        response=jsonify(manifest=manifest,status=batch['status'],entry_status=batch['entries'][index]['status'])
+        response.headers['Cache-Control']='no-store';return response
+    @app.get('/batches/<identifier>/video/<int:index>/<filename>')
+    def batch_video_segment(identifier,index,filename):
+        if not re.fullmatch(r'[a-f0-9]{32}-[0-9]{5}\.mp4',filename):raise ValueError('Invalid preview segment.')
+        response=send_from_directory(inside(root_fn(),'batches/'+identifier+'/live/video/'+str(index)),filename,mimetype='video/mp4')
+        response.headers['Cache-Control']='private, max-age=31536000, immutable';return response
     @app.get('/batches/<identifier>/results.xlsx')
     def batch_download(identifier):
         return send_from_directory(inside(root_fn(),'outputs/'+identifier),'results.xlsx',as_attachment=True)

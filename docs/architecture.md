@@ -11,9 +11,9 @@
 
 ## Live monitoring
 
-An optional publisher replaces `batches/<id>/live/snapshot.json` atomically with one cropped JPEG and matching frame metadata. Localization and review publish from their existing decode loops; DLC pairs its prediction-writer callback with a bounded, thread-safe cache of arena crops sized for its inference prefetch queue. There is no second video decode for the preview. Encoding is throttled to two updates per second, with a final-frame update at the end of a pass.
+The inference prediction hook pairs every frame with its original arena crop and sends it to a bounded video-encoding worker. The worker publishes immutable fragmented-MP4 segments and an atomic per-recording manifest under `batches/<id>/live/video/<index>/`. The browser appends these segments to one native video element, preserving source time offsets. Playback, buffering, and pausing never control analysis scheduling.
 
-The live API omits unchanged images and rejects snapshots belonging to a different recording. The browser polls without overlapping requests, guards against stale responses, and stops image transfers when the preview is hidden. Completed result videos stay mounted across progress updates. Missing or failed preview telemetry cannot change measurements or terminate scoring. The [live analysis plan](live-analysis-plan.md) documents the experience and verification.
+One annotation renderer serves both streamed footage and the final review export. Completed streams remain available while the batch advances. Cached predictions create their stream during review rendering. Metadata-only telemetry supplies current processing stages independently of the watched recording. Encoder overload, interruptions, and unavailable browser support have explicit failure states; they cannot change scientific tables or stop inference. See the [buffered video design](live-analysis-plan.md) for lifecycle, resource, and verification details.
 
 ## Coordinate systems
 

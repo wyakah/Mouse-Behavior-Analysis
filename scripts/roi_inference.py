@@ -5,6 +5,14 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 for k,v in {'MPLCONFIGDIR':'.cache/matplotlib','TORCH_HOME':'.cache/torch','HF_HOME':'.cache/huggingface','XDG_CACHE_HOME':'.cache'}.items():os.environ[k]=str(ROOT/v)
 os.environ['DLC_LIGHT']='True'
 from threechamber.live import LivePublisher,FrameCache,PredictionTap
+def start_video(*args):
+ try:
+  from threechamber.streaming import start_video as start
+  return start(*args)
+ except ImportError:
+  import warnings
+  warnings.warn("Live video encoder unavailable; inference continues. Install requirements-dlc-preview.txt.",RuntimeWarning)
+  return None
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--video',required=True,type=Path);p.add_argument('--proposals',required=True,type=Path);p.add_argument('--output',required=True,type=Path);p.add_argument('--dataset');p.add_argument('--bbox-scale',type=float,default=1);a=p.parse_args()
  if not .5<=a.bbox_scale<=2:p.error('Box scale must be between0.5 and2.')
@@ -45,19 +53,31 @@ def main():
  # Include queued batches, the active batch and producer look-ahead. Retain only arena crops.
  cache.capacity=runner.batch_size*(runner.inference_cfg.multithreading.queue_length+3)
  started=time.time();print('Running DLC subject ROI on',device,'frames',len(records),flush=True)
+ preview=start_video(live,live.context['config'],it.fps) if live else None
  parts=list(cfg.metadata.bodyparts)
  def observe(index,prediction):
   image=cache.take(index)
-  if image is None or not (live.due() or index==len(records)-1):return
+  if image is None:
+   if preview:preview.failure='Preview frame buffer lost alignment; final review will be available after analysis.'
+   return
   import cv2
   poses=np.asarray(prediction['bodyparts']);r=records[index];row={}
   for canonical,part in [('nose','nose'),('center','mouse_center'),('tail_base','tail_base')]:
    values=poses[0,parts.index(part)] if r.get('bbox_xyxy') is not None and len(poses)>0 else [np.nan]*3
    row.update({canonical+'_'+c:float(v) for c,v in zip(['x','y','likelihood'],values)})
-  live.frame(cv2.cvtColor(image,cv2.COLOR_RGB2BGR),index,r['source_time_s'],row=row,force=index==len(records)-1,image_is_crop=True)
+  image=cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
+  duration=records[index+1]['source_time_s']-r['source_time_s'] if index+1<len(records) else live.context['source_duration_s']-r['source_time_s']
+  if preview:preview.submit(image,index,r['source_time_s'],duration,row,image_is_crop=True)
+  live.frame(image,index,r['source_time_s'],row=row,force=index==len(records)-1,image_is_crop=True,encode_image=False)
  if live:
   tap=PredictionTap(observe)
-  pep.video_inference(it,runner,shelf_writer=tap)
+  try:pep.video_inference(it,runner,shelf_writer=tap)
+  except BaseException:
+   if preview:preview.failure='Tracking was interrupted before all preview frames were produced.'
+   raise
+  finally:
+   if preview and tap.observer_failed:preview.failure='The prediction preview stopped early. Check the final review output.'
+   if preview:preview.close()
   predictions=tap.predictions
  else:predictions=pep.video_inference(it,runner)
  if len(predictions)!=len(records):raise ValueError('DLC output frame count does not match proposals.')

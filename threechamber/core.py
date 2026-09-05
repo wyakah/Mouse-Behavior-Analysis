@@ -277,63 +277,36 @@ def bouts(rows):
 def review_video(video,rows,cfg,destination,progress=lambda x:None,live=None):
     """Preserve every source frame and its timestamps in an H.264 review video (no audio)."""
     from fractions import Fraction
-    H,cups,w,h,bounds=analysis_geometry(cfg); inv=np.linalg.inv(H)
+    from threechamber.annotation import AnnotationRenderer
+    from threechamber.streaming import start_video
     if live:live.phase('rendering','Writing the annotated review video',len(rows))
-    drawn_zones=cfg.get('analysis_mode') in ('drawn_zones','circle_zones')
-    region_key='interaction_zones' if drawn_zones else 'cups'
-    source_regions=circle_polygons(cfg['cup_circles']) if cfg.get('analysis_mode')=='circle_zones' else cfg.get(region_key,{})
-    contours={k:np.rint(np.asarray(source_regions[k])).astype(np.int32) for k in cups}
-    # Render 1 cm external rings using a metric raster, then project contour back to camera.
-    scale=20; rings={}
-    for key,p in cups.items():
-        if drawn_zones:continue
-        mask=np.zeros((int(h*scale)+4,int(w*scale)+4),np.uint8)
-        cv2.fillPoly(mask,[np.rint(p*scale).astype(np.int32)],255)
-        dist=cv2.distanceTransform(255-mask,cv2.DIST_L2,cv2.DIST_MASK_PRECISE)
-        outer=np.uint8(dist<=scale)*255
-        cs,_=cv2.findContours(outer,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        rings[key]=[np.rint(transform(c.reshape(-1,2)/scale,inv)).astype(np.int32) for c in cs]
-    with av.open(str(video)) as source, av.open(str(destination),'w') as target:
-        ins=source.streams.video[0]; stream=target.add_stream('libx264',rate=ins.average_rate)
-        view=cfg.get('review_crop_xyxy')
-        if view is not None:
-            vx1,vy1,vx2,vy2=map(int,view)
-            if not 0<=vx1<vx2<=ins.width or not 0<=vy1<vy2<=ins.height:raise ValueError('Review crop outside source frame.')
-            stream.width=vx2-vx1;stream.height=vy2-vy1+82
-        else:stream.width=ins.width;stream.height=ins.height
-        stream.pix_fmt='yuv420p'
-        stream.time_base=Fraction(1,1000000); stream.codec_context.time_base=stream.time_base
-        stream.options={'crf':'20','preset':'fast'}
-        count=0
-        for i,frame in enumerate(strict_frames(source,ins)):
-            if i>=len(rows): raise ValueError('Review frame count exceeds tracking rows.')
-            im=frame.to_ndarray(format='bgr24'); r=rows.iloc[i]
-            if live and (live.due() or i==len(rows)-1):
-                live.frame(im,i,r.time_s,row=r.to_dict(),force=i==len(rows)-1)
-            for side,color in [('left',(200,180,70)),('right',(100,180,245))]:
-                if side in contours:
-                    cv2.polylines(im,[contours[side]],True,color,2)
-                    if side in rings:cv2.polylines(im,rings[side],True,color,1)
-            for x in bounds:
-                line=np.rint(transform([[x,0],[x,h]],inv)).astype(int)
-                cv2.line(im,tuple(line[0]),tuple(line[1]),(190,190,190),1)
-            for part,color in [('nose',(30,245,240)),('center',(100,230,120))]:
-                if r[f'{part}_valid']:
-                    x,y=r[f'{part}_x'],r[f'{part}_y']
-                    if 0<=x<ins.width and 0<=y<ins.height: cv2.circle(im,(round(x),round(y)),4,color,-1)
-            if view is not None:im=cv2.copyMakeBorder(im[vy1:vy2,vx1:vx2],82,0,0,0,cv2.BORDER_CONSTANT,value=(20,24,30))
-            cv2.rectangle(im,(0,0),(stream.width,82),(20,24,30),-1)
-            status='OUTSIDE SCORING WINDOW' if r.duration_s<=0 else ('NOSE UNRESOLVED' if not r.nose_scoreable else f'L cup: {bool(r.left_interaction)}   R cup: {bool(r.right_interaction)}')
-            if not cups and r.duration_s>0:status='CHAMBER OCCUPANCY ONLY | 1 cm cup metrics unavailable'
-            caption='Selected zones | yellow nose; green center' if drawn_zones else ('1 cm outside cup floor edge' if cups else 'No physical scale | yellow nose; green center')
-            for y,text in [(23,f'Frame {i} | {r.time_s:.3f}s | Chamber: {r.chamber}'),(48,status),(71,f'Nose p={r.nose_likelihood:.3f} | cutoff={cfg.get("pcutoff",.6):.2f} | {caption}')]:
-                cv2.putText(im,text,(12,y),cv2.FONT_HERSHEY_SIMPLEX,.42 if view is not None else .52,(235,240,245),1,cv2.LINE_AA)
-            out=av.VideoFrame.from_ndarray(im,format='bgr24'); out.pts=round(r.time_s*1e6); out.time_base=stream.time_base
-            for packet in stream.encode(out): target.mux(packet)
-            count+=1
-            if i%200==0: progress(i/len(rows))
-        for packet in stream.encode(): target.mux(packet)
-        if count!=len(rows): raise ValueError('Review decode ended early.')
+    preview=None
+    try:
+        with av.open(str(video)) as source, av.open(str(destination),'w') as target:
+            ins=source.streams.video[0]
+            renderer=AnnotationRenderer(cfg,[ins.width,ins.height])
+            preview=start_video(live,cfg,float(ins.average_rate))
+            stream=target.add_stream('libx264',rate=ins.average_rate)
+            stream.width=renderer.width;stream.height=renderer.height;stream.pix_fmt='yuv420p'
+            stream.time_base=Fraction(1,1000000);stream.codec_context.time_base=stream.time_base
+            stream.options={'crf':'20','preset':'fast'}
+            count=0
+            for i,frame in enumerate(strict_frames(source,ins)):
+                if i>=len(rows):raise ValueError('Review frame count exceeds tracking rows.')
+                im=frame.to_ndarray(format='bgr24');r=rows.iloc[i];row=r.to_dict()
+                if live and (live.due() or i==len(rows)-1):
+                    live.frame(im,i,r.time_s,row=row,force=i==len(rows)-1,encode_image=False)
+                annotated=renderer.draw(im,i,r.time_s,row)
+                duration=float(rows.iloc[i+1].time_s-r.time_s) if i+1<len(rows) else float(frame.duration*frame.time_base) if frame.duration else 1/float(ins.average_rate)
+                if preview:preview.submit(annotated,i,r.time_s,duration,row,annotated=True)
+                out=av.VideoFrame.from_ndarray(annotated,format='bgr24');out.pts=round(r.time_s*1e6);out.time_base=stream.time_base
+                for packet in stream.encode(out):target.mux(packet)
+                count+=1
+                if i%200==0:progress(i/len(rows))
+            for packet in stream.encode():target.mux(packet)
+            if count!=len(rows):raise ValueError('Review decode ended early.')
+    finally:
+        if preview:preview.close()
 
 def analyze(video,tracks_path,cfg,outdir,progress=lambda s:None):
     outdir=Path(outdir); outdir.mkdir(parents=True,exist_ok=False)

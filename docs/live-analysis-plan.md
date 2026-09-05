@@ -1,49 +1,49 @@
-# Live analysis preview
+# Buffered annotated analysis video
 
 ## Product contract
 
-The Results screen becomes the live workspace when a batch starts. It shows the actual current recording, actual processing pass, the latest completed frame available from that pass, and the sequential queue. Completed measurements and review videos remain accessible throughout the batch.
+The Results screen plays continuous annotated footage while analysis proceeds independently. It retains every frame in source order, with the original relative presentation timestamps. Playback starts once at least three seconds of footage are buffered (normally two approximately two-second segments), or immediately when a shorter completed clip is available.
 
-A preview is not real-time video playback. It samples completed work at up to 2 Hz; analysis and export still process all frames. No synthetic mouse motion, interpolated landmarks, guessed progress percentages, or provisional behavioral totals are displayed.
+Model preparation and subject localization happen first. The initial loading state is explicit. A fixed wall-clock delay is not promised: slow inference can cause buffering; faster processing increases the amount of footage available ahead of playback. The player shows **Watching** and **Video ready through** separately from current-pass processing progress.
 
 ## Experience
 
-- Dark arena viewer with matched cup circles, reviewed chamber boundaries, and three color-coded landmarks.
-- Localization shows only a labeled candidate box. It never masquerades as nose/body-center tracking.
-- Accepted points are solid; low-confidence finite points use an uncertainty marker; missing points are not drawn. Confidence badges explain each state.
-- Source timestamp, frame count, current-pass progress, batch completion count, and actual stage transitions.
-- Hide/show preview without canceling work; optional expanded viewer. Reduced-motion support and readable narrow layouts.
-- Completed videos remain mounted while progress refreshes. History inspection cannot replace or cancel the running job.
-- Clear preparing, waiting-for-frame, stale connection, failed, interrupted, cached-track, and completed states.
+- Native video controls: pause, play, replay buffered footage, and expand. Hide/show preserves position; Focus view enlarges the arena.
+- Matching cup circles and reviewed chamber boundaries; nose, center, and tail-base overlays share one renderer with the final review export.
+- Solid points are accepted by the confidence/validity rules. Dashed points are uncertain; missing points are absent. Frame-specific likelihoods are burned into the video so they cannot drift ahead of playback.
+- During inference the caption identifies tracking preview. The final scored review additionally shows chamber and cup-zone state. Behavioral totals are finalized after scoring.
+- Processing another recording never replaces footage the user is still watching. **Watch active recording** switches explicitly; reaching the end automatically advances to the active recording, if one exists. Queue buttons allow replay of available recordings.
+- Batch completion preserves playback. Completed result cards and final downloads remain available below.
+- Missing encoders, failed previews, interrupted processing, unavailable browser support, and reconnecting transport have explicit states. Preview failure never substitutes invented frames or changes scientific results.
 
 ## Architecture
 
-1. An optional, best-effort publisher atomically replaces a bounded JSON snapshot containing one JPEG and its exact-frame metadata. Preview failure cannot fail scientific scoring.
-2. Localization publishes a source frame and its actual candidate box from its decode loop.
-3. DLC's existing per-frame prediction-writer hook publishes postprocessed predictions paired with a bounded cache of original frames. Inference batch size and prediction behavior are retained.
-4. The scoring/review path publishes the original frame plus accepted scoring landmarks. Source timestamps and exported measurements remain unchanged.
-5. The batch API exposes snapshots only for the selected local batch, without caching. Client requests are throttled and non-overlapping, with stale-response guards.
-6. The UI updates the viewer and progress in place. It adds completed cards once instead of rebuilding their video elements on every poll.
+1. DLC's prediction-writer hook pairs each prediction with the corresponding original arena crop. Its thread-safe cache covers the queued, active, and producer inference batches.
+2. A dedicated encoding worker uses a bounded 64-frame queue. It writes H.264 baseline fragmented-MP4 segments with source-derived frame durations. Each immutable segment is published only after closing; an atomic manifest lists contiguous available segments.
+3. Frames are encoded relative to their segment's first timestamp. The browser applies each segment's source offset using Media Source Extensions. This preserves variable source intervals across boundaries.
+4. The UI begins after a small buffer and appends segments without replacing the video element. Transport requests do not overlap. Recording changes abort stale requests; hiding finishes an in-flight append before suspending further transfers, avoiding duplicated segments.
+5. Each recording retains its own manifest and segments under `batches/<id>/live/video/<index>/`. A complete inference stream stays available during scoring/export. Cached predictions produce the stream during review rendering instead.
+6. `AnnotationRenderer` draws both the stream and final review. The original final MP4 and scientific table exports remain separate, so an interrupted preview cannot invalidate them.
+7. Existing live telemetry supplies processing stages and frame counts without JPEG images. The sampled-image canvas and detached likelihood cards have been removed from the interface.
 
-## Verification
+## Resource and failure behavior
 
-- Unit tests: snapshot throttling, matching image/metadata identity, confidence handling, failure isolation, bounded frame retention, and DLC prediction passthrough.
-- Pipeline tests: preview on/off result equivalence, complete frame/PTS preservation, two-recording transition, failure continuation, missing/stale snapshots, and restart state.
-- Real-data checks: existing sample scoring with live preview plus a fresh short DLC run to exercise actual inference callbacks.
-- Browser checks: live stages, queue transitions, hide/show and expand, completed-video continuity, narrow layout, and final exports.
-- Performance: record publication count/payload sizes and compare representative preview-on/off processing. Preview does not decode the source a second time during inference or queue frames for streaming.
+No additional source decode occurs during inference. The preview encoder runs independently of playback speed. If its bounded queue fills, the preview reports failure rather than silently dropping frames or blocking inference. A prematurely ended frame sequence is marked failed. Final review rendering can provide a new stream when an earlier preview failed.
 
-## Scope
+Segments persist locally for replay and are excluded from Git. One browser player holds one recording at a time; changing recordings releases its media buffers. A ten-minute sample produced approximately 72 MiB of preview segments. Browser codec support is checked before opening the stream; the final downloadable MP4 remains available if streaming is unsupported.
 
-No new setup step, live scrubbing, manually paused inference, or continuously changing behavioral totals. The current model and scientific validation status are unchanged.
+## Dependencies
 
-## Verification results · September 5, 2026
+The UI environment requires PyAV 18. The separate DeepLabCut environment also needs `requirements-dlc-preview.txt`. Missing preview imports warn and preserve normal inference; existing tracking weights and inference batches are unchanged.
 
-- **74 automated tests pass**, including preview failure isolation, exact image/prediction pairing, source-timestamp preservation, recording transitions, and stale API responses. JavaScript syntax checks pass.
-- Fresh DeepLabCut runs on two native 20-second sample clips produced 448 predictions each, with live tracking snapshots from frame 0 through 447. Both recordings completed scoring, review videos, and the combined workbook. Largest observed snapshot was 38,407 bytes.
-- Preview enabled versus disabled on the same 448-frame input produced **exactly identical raw poses and selected tracking tables**. Measured inference/export-script time was 14.23 seconds enabled versus 14.05 seconds disabled. This single-machine comparison is indicative, not a general performance guarantee.
-- A complete 600-second sample using its existing content-matched predictions produced **13,482 scored frames**, exactly matching prior measurements and summary. All annotated-video timestamps matched the source within one microsecond. The full recording emitted observed preview frames from 0 through 13,481 and exported the workbook successfully.
-- Browser review exercised actual DLC overlays, uncertain landmarks, sequential queue transitions, hide/show, Focus view, the narrow layout, and compact completion state. A completed review video continued from the start to 17.9 seconds across progress refreshes while the full recording was still processing.
-- Real inference exposed a prefetch-buffer issue missed by the initial fixtures. The corrected cache retains arena crops across DLC's queued, active, and producer batches, with explicit regression coverage and a lock for producer/consumer access.
+## Verification · September 5, 2026
 
-Validation runs used isolated local workspaces. Sample media, predictions, and generated test artifacts are excluded from Git.
+- **82 Python tests and three JavaScript playback lifecycle tests pass.** JavaScript syntax checks also pass.
+- Python tests cover segment publication before completion, variable frame rates, exact timestamps and durations, shared crop/source drawing, missing/uncertain landmarks, scientific output equivalence, bounded-queue overload, interrupted streams, and API path/restart behavior.
+- JavaScript lifecycle tests cover short-clip buffering, hiding during an append without duplicate segments, and preserving manually paused playback across status refreshes.
+- Two fresh DeepLabCut sample runs produced **448 frames each**, across ten playable segments per recording. Every streamed frame timestamp matched its source within one microsecond. Raw poses and selected tracking tables matched the prior inference output exactly.
+- A full **600-second, 13,482-frame** sample using content-matched predictions produced **300 segments**. Every streamed and final-review frame retained its timestamp. All prior frame measurements and the summary matched exactly; Excel export succeeded.
+- Browser checks in the in-app browser exercised actual H.264 playback, replay of a completed recording during the next recording's inference, automatic queue advance, Focus view, hide/show at the same playback position, and playback continuing after analysis completion.
+- A standalone warm encoding check drew and encoded 500 repetitions of an arena frame in approximately 0.55 seconds. One warm 448-frame DLC run with streaming took 14.4 seconds. These are local observations, not latency or throughput guarantees.
+
+Validation used isolated local workspaces. Test recordings, predictions, and generated media are excluded from Git. Tracking accuracy remains scientifically unvalidated; this feature changes review and monitoring, not model weights.

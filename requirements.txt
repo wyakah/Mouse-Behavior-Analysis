@@ -1,4 +1,4 @@
-av>=14,<19
+av>=18,<19
 Flask>=3.1,<4
 numpy>=2,<3
 opencv-python-headless>=4.10,<6

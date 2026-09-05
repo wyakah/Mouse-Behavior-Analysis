@@ -145,8 +145,8 @@ async function refreshJobs(generation){
   if(b.id===job)renderJob(b);
  }
  busy=!!activeJob;if(busy!==wasBusy)renderLists();
- $('#results-heading').textContent=activeJob?'Analysis, in motion.':'Review your measurements.';
- $('#results-description').textContent=activeJob?'Watch the latest processed frame as each recording moves through analysis. Completed results appear below.':'Download the combined table and check each recording’s annotated video.';
+ $('#results-heading').textContent=activeJob?'Your analysis is running.':'Review your measurements.';
+ $('#results-description').textContent=activeJob?'Watch annotated video while the batch processes.':'Download the combined table and check each recording’s annotated video.';
  if(activeJob||retry)watchTimer=setTimeout(()=>refreshJobs(generation).catch(e=>notice(e.message,true)),retry?3000:1800);
  else await historyList();
 }
