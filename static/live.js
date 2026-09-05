@@ -45,7 +45,7 @@ class LiveAnalysisView {
     this.batch=batch;this.seenActive||=running;this.host.hidden=false;
     this.host.classList.toggle('is-running',running);
     this.host.classList.toggle('is-finished',!running);
-    if(!running)this.host.classList.remove('focus-view');
+    if(!running){this.host.classList.remove('focus-view');const focus=this.host.querySelector('[data-action="focus"]');focus.textContent='Focus view ↗';focus.setAttribute('aria-pressed','false');}
     if(changed){this.snapshot=null;this.image=null;this.imageToken++;this.revision='';this.frameKey='';this.renderFrame();}
     const done=batch.entries.filter(e=>e.status==='complete').length,failed=batch.entries.filter(e=>e.status==='failed').length;
     const active=batch.entries.find(e=>e.status==='running'),index=batch.entries.indexOf(active);
