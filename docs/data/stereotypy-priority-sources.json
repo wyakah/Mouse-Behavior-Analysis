@@ -1,0 +1,329 @@
+{
+  "cbas": [
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_0_labels.csv",
+      "public_id": "1-i3HQGLyhRlT1VzoRBvOB9EFzQpsfyce",
+      "sha256": "422f2641bb656653ba072c4c2dca9e40d5dcd6cade057d299c433a3724e23dd9",
+      "bytes": 996373
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_0.mp4",
+      "public_id": "1UQ7yzk64uCt3M7I8HhADnJU1C5yXuExx",
+      "sha256": "ef2e658f0c4822039279bdd326c59fce92511c5c447eb065d2700f5ebc737ce2",
+      "bytes": 68076685
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_1_labels.csv",
+      "public_id": "1jN9DSCNSkIyhp4aXT1hUPj9iyOBaVNMI",
+      "sha256": "04819a7586141ad2f8aae6639b305774ee9d88caf8b20c3759666a2b81b5b51f",
+      "bytes": 407797
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_1.mp4",
+      "public_id": "1FoysuzIVH4qdBklqQ2Mo8PGWhIB27bj1",
+      "sha256": "76598b93da3309c05b47c687430cf8baa3836502cca8f09a89969c378eb5295c",
+      "bytes": 31605503
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_2_labels.csv",
+      "public_id": "1XghZSEZ6W1fhslrGzBBc_xKcgiszOJBd",
+      "sha256": "ff30aa9f48f64da3555d036b3c92de9aee5f0759080bcf2253fd08802b482a6a",
+      "bytes": 615866
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_2.mp4",
+      "public_id": "1gfodSMBQv7S5_VmVR1KyV-o7bzrkWEpk",
+      "sha256": "29a4889b51afd2412438345f09c856c195630594bfeeae9c0ba69fc899f5fe85",
+      "bytes": 46140023
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_3_labels.csv",
+      "public_id": "1cQO6xwkYVbOM9yn-DoRLLQ2Y-qPKPqQt",
+      "sha256": "b2be2dc46a3988a1b4d67c0364697af2ea008c055ffbab47c33d76da4d7b94e5",
+      "bytes": 545389
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_3.mp4",
+      "public_id": "1Iooqeq7ra4DccilniVDPGI6V12unzhcR",
+      "sha256": "8e913db94f07262dc69411178f12e48cd2aec925c60202f36867928671b5c6f8",
+      "bytes": 39858429
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_4_labels.csv",
+      "public_id": "1f0aAqqfxxUroFH1R1s14bj9yewOgm4vt",
+      "sha256": "88f7b49a4c63d659d7239d2ab643fbb82c42e434ceae9a0f6847c097682b6f03",
+      "bytes": 449886
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_4.mp4",
+      "public_id": "1JbrlK6uVj-KhZMeSqWOp0ZRlUBqBmCfA",
+      "sha256": "c5e5baac3ed40daeaf8627694c73300818c22fa39f09943f932054cd9b03a2ec",
+      "bytes": 34401443
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_5_labels.csv",
+      "public_id": "1pUxWEQsfVnVHPN-fdzf5csg_7snojaBt",
+      "sha256": "90044d8a21412820217f7ea46243e2b6627a7cfed46c94cc07e5b6bada688200",
+      "bytes": 472504
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_5.mp4",
+      "public_id": "1FUtXfr786ujvtV2JWuTIy0OjtypF2Bxn",
+      "sha256": "eed3a40f4835935b4521267dd5d01b54210ed28f5d1ab27b027922415b64ccce",
+      "bytes": 34803317
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_6_labels.csv",
+      "public_id": "1JP5mljTO11GYPzelMB0QXqQwxOcDvE8W",
+      "sha256": "0fb61133e788f480e28d169b5c6a1d508fbc0d692849ef46e24b73518f1e466a",
+      "bytes": 654050
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_6.mp4",
+      "public_id": "1x5CmxZ8kIkY5eWEv80dwg3KTktoj0RAv",
+      "sha256": "bb9aecb578276bb3b417bb4b43fc0056658d652d090a9f4daa2a0db6ed802f83",
+      "bytes": 45481408
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_7_labels.csv",
+      "public_id": "1n8ubzewmTYJ63Mj4kF1Hfsimfur4Dg58",
+      "sha256": "6f788852ccd1e390c5b0b165f01b22fafccffec800120e9d279e1fe63869c9a0",
+      "bytes": 468333
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_7.mp4",
+      "public_id": "1R3BSnLkr42eYOkP3u2dRMnEWRVB6bWZj",
+      "sha256": "1fc56e2dad4f3c5969a0c5afef3cf75c07fa8120bc597e7ab3ccd553f675f4dd",
+      "bytes": 36593305
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_8_labels.csv",
+      "public_id": "1edaalzfjHJfzlqgsjE7WHvKEjbiBcc_O",
+      "sha256": "362f386803c888cfd9b12fecc0ccde1f2b8c2f5a1d3540dfbeac7ce3dea362d3",
+      "bytes": 538466
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_8.mp4",
+      "public_id": "1daTUkYxp9l1GPL2wHjQa2uh3enu72v0J",
+      "sha256": "83d9d5b17cf24144fa0f90ea79f366a47237a4fbf5807bb1e47a809851368c89",
+      "bytes": 41592123
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_9_labels.csv",
+      "public_id": "17izKYuXviO82jVcAjsthRXWcSGQBq3DC",
+      "sha256": "c854da22dfa129e6cc9b09b1e3e74751b99f110439cdab6f2b889a54faf2c70f",
+      "bytes": 659124
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_9.mp4",
+      "public_id": "1ysQDRIFBnV56KyfAoWulwQKpeIMVFWHA",
+      "sha256": "8c3151c7b253eafd57f208c83ded0638517093422bc5a82d773e1d6c0bf7a50b",
+      "bytes": 51777287
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_10_labels.csv",
+      "public_id": "1DePeR7Ra2EoBh6D5QkpqA4tUeKcVeOIm",
+      "sha256": "7d3d946de6a0833bd9728847cb9b4b6d92bb07c31f1bdc97b41e763973d7056a",
+      "bytes": 517654
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_10.mp4",
+      "public_id": "1GKFIw6V1Sog2_b8Zx2LdnR0wOV5BAg1b",
+      "sha256": "bab48b3de2dcf5144ccef53d715e52501bdd8661dd8cceaa702a3cc3e1d404f0",
+      "bytes": 39597183
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_11_labels.csv",
+      "public_id": "18KqIVmvz-fWLKoyG3mzqB_msOi16x0gz",
+      "sha256": "676e5de68dfb79c776906d8037ff4ae98391ca588bf07a18329530e21dcaffc8",
+      "bytes": 462528
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_11.mp4",
+      "public_id": "1iDHEIglEkrLC4rHG6x2FW9H-iI0o2Sb2",
+      "sha256": "056d6c39db8bbb9e9e96c9faa9b55962f962117beabeba674394c705e10bf06b",
+      "bytes": 35304623
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_12_labels.csv",
+      "public_id": "1mR0xi6S4tlL_fAgoYdkvnbkwzP5pKC05",
+      "sha256": "c5a24b8f43666431b9c61d3e5356293c114dadc2a9ec9a0e927ad54beef0feae",
+      "bytes": 549173
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_12.mp4",
+      "public_id": "16Rdbb_4IXpxup7KzuL62OH3Sv7iaoa1q",
+      "sha256": "111948a6a8626bee202af8815805f08e2a357f11f000b5a1bd86eefc2825a187",
+      "bytes": 41683787
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_13_labels.csv",
+      "public_id": "1MUzMg8k1nHZvC2Ajq5MuLNw4rFmfvNKU",
+      "sha256": "ca63b857ee4edcd0ca3e657abee8bc4f3ff0b52268a61b1ea9f69058dc05829f",
+      "bytes": 821965
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_13.mp4",
+      "public_id": "1hMsFhQLTc5JdfqRws7yoW6PBcteTMtaP",
+      "sha256": "20845020e2bf5d13874a21ec333d8941737f15bcc50738383e23239f187eebd3",
+      "bytes": 55898997
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_14_labels.csv",
+      "public_id": "1tforZ4FMJa_9_GGMTtabEoSdTZ2JE1B5",
+      "sha256": "a642f2b983f5b07ad0497dcbb6f42e3b881abe497be15f9b1cf559bb98366716",
+      "bytes": 836069
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_14.mp4",
+      "public_id": "102nbJFGe9sff5cLIM1OX3No7JgrwzJiL",
+      "sha256": "efb767b3aefb9e721dfef873b6d81743b33992b49c45cda89b3dbe92170eaa80",
+      "bytes": 59099182
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_15_labels.csv",
+      "public_id": "1NcA3kAxczPy6DrAALhXv7tIYiAxUwZEl",
+      "sha256": "5d910a8e453c1e3230199f37a5080a52cd40f09c7b8a6a770656cb9940d806a2",
+      "bytes": 117157
+    },
+    {
+      "dataset": "cbas",
+      "split": "train",
+      "name": "clip_15.mp4",
+      "public_id": "1B23NMLPoSHAh94M2LxA6IwvM1goh_KVw",
+      "sha256": "9ef161609d380d33ed21fbdf9a9eb7cb6296db40f03605f49e64d514fcd910c4",
+      "bytes": 9139337
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_0_labels.csv",
+      "public_id": "1rZJ09EAFyZiGTaHExJ2ncQw-qdxJYZaj",
+      "sha256": "b3bcbb723244a45d8e4d4d7d0f47f57069ffef9ce69d7357eed95dc7cf55a211",
+      "bytes": 524075
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_0.mp4",
+      "public_id": "16uNCMf4Dy1tYp-h1X-c-jMWiLFSauGL0",
+      "sha256": "47c3ea29896c186a76444c894c7113812ede233958630712e46c82b1d8c1303a",
+      "bytes": 35826429
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_1_labels.csv",
+      "public_id": "1Bcda7C1hfFB36hnT-9bF8W_bvaRV4Rtz",
+      "sha256": "52e1480d733a5ace8d5ff73aea12b085b4704a52001aad3c0d506680ac9b02e3",
+      "bytes": 720253
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_1.mp4",
+      "public_id": "1M2Agy3V3WsWDwn0VRKdae47bBrFIUaNT",
+      "sha256": "3a31ce9b98945b97097b4f8750cf9bdceae36831a30812d89db9741cb290acc3",
+      "bytes": 51139963
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_2_labels.csv",
+      "public_id": "1Ib4SfFZ7xltg2Y1Z34rtZ5yf5F4RGSYf",
+      "sha256": "0124fd519b76b7cf663eff1ade6afe703bfc4de19dd36e98d38eac866fbf4e53",
+      "bytes": 449550
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_2.mp4",
+      "public_id": "1f3YkKvKVTV8r2ty4gNPBMZTqTfRUiXqM",
+      "sha256": "3a5814ec290fbc6b0e49592a7d1ae6157c52820d16ce3f8bce3ca87e6b52bf8d",
+      "bytes": 30625491
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_3_labels.csv",
+      "public_id": "1OLDni7azOBNQkCp3-QWSYGcn1EOT2OEE",
+      "sha256": "3f085d0ff8e24d8ff6ba013007d0ec737490107fcac0805712f9671719f97f51",
+      "bytes": 345728
+    },
+    {
+      "dataset": "cbas",
+      "split": "test",
+      "name": "clip_3.mp4",
+      "public_id": "13T8V5-9ERavpssy_O9dAuprzQXZX3wGl",
+      "sha256": "4b5112fcbdee9c858016f5de19a4b760e43d4d5733a6d2dbfe8058a66eb7be21",
+      "bytes": 24227546
+    }
+  ],
+  "labgym": {
+    "examples_public_id": "1xaUBTrJ4v0xGCQCEgh4tZ7fOOJr6_nMP",
+    "model_public_id": "13ss-5myp0du6pXzbueKRMb__8VG0kW-Y",
+    "zoo": "https://github.com/umyelab/LabGym/blob/master/LabGym_Zoo.md"
+  }
+}

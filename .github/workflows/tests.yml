@@ -16,6 +16,10 @@ jobs:
           node-version: '22'
       - run: python -m pip install -r requirements.txt
       - run: python -m pytest -q
+      - name: Optional training integrity checks
+        run: |
+          python -m pip install 'scikit-learn>=1.6,<2'
+          python -m pytest tests/test_stereotypy_priority_training.py -q
       - run: node --test tests/*.test.cjs
       - name: Check JavaScript syntax
         run: |
