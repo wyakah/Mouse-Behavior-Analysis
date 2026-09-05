@@ -7,3 +7,5 @@ PyYAML>=6,<7
 pytest>=8,<10
 imageio-ffmpeg>=0.6,<1
 tables>=3.10,<4
+scipy>=1.15,<2
+statsmodels>=0.14.4,<0.15

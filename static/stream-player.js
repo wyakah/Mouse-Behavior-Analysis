@@ -110,6 +110,7 @@ class AnalysisStreamPlayer {
     }
   }
   setHidden(hidden) {
+    if(this.hidden===hidden)return;
     this.hidden=hidden;
     if(hidden){this.resumeOnShow=!this.video.paused;this.video.pause();clearTimeout(this.timer);}
     else {if(this.resumeOnShow)this.video.play().catch(()=>{});if(!this.controller)this.poll();}

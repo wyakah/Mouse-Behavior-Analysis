@@ -27,6 +27,7 @@ numpy==2.5.2
 opencv-python-headless==5.0.0.93
 packaging==26.3
 pandas==3.0.5
+patsy==1.0.3
 pluggy==1.6.0
 py-cpuinfo==9.0.0
 pydantic==2.13.5
@@ -36,7 +37,9 @@ pytest==9.1.1
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 rich==15.0.0
+scipy==1.18.1
 six==1.17.0
+statsmodels==0.14.6
 tables==3.11.1
 threadpoolctl==3.6.0
 typing-inspection==0.4.4
