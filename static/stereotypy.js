@@ -23,7 +23,7 @@ async function inventory(){
  if(session)$('sessions').value=session.id;
 }
 async function prepareEntry(index){
- if(dirty||busy||preparing)throw Error('Save the current revision before changing recordings.');
+ if(dirty||busy||preparing||(typeof cageChanged!=='undefined'&&cageChanged))throw Error('Save annotations and cage changes before changing recordings.');
  if(!queue.entries[index])return;
  const entry=queue.entries[index];preparing=true;setupView.render();$('queue-recording').disabled=true;$('next-recording').disabled=true;
  try{
@@ -42,7 +42,7 @@ $('queue-recording').onchange=async e=>{try{await prepareEntry(Number(e.target.v
 action('next-recording',()=>prepareEntry(currentIndex+1));
 $('sessions').addEventListener('change', async () => {
   try {
-    if (dirty || busy || preparing) { $('sessions').value = session?.id || ''; throw new Error('Save the current revision before changing sessions.'); }
+    if (dirty || busy || preparing || (typeof cageChanged!=='undefined'&&cageChanged)) { $('sessions').value = session?.id || ''; throw new Error('Save annotations and cage changes before changing sessions.'); }
     if ($('sessions').value) await load($('sessions').value);
   } catch (e) { notice(e.message, true); }
 });
@@ -59,6 +59,7 @@ async function load(id) {
   $('seek').max = session.video_manifest.frames.length - 1;
   $('timing-info').textContent = `${session.video_manifest.frame_count} source frames · ${fmt(session.video_manifest.duration_s)} s · ${session.video_manifest.source_gaps.length} source gaps · ${session.video_manifest.variable_frame_rate ? 'variable' : 'constant'} frame timing. Frame buttons show the exact source image.`;
   resetEdit(); definition(); render(); savedSummary();
+  if(typeof cageRefresh==='function')cageRefresh();
 }
 function definition() { $('definition').textContent = session?.ethogram[$('behavior').value] || ''; }
 $('behavior').addEventListener('change', definition);
@@ -69,12 +70,12 @@ function frameIndex() {
   while (low < high) { const mid = (low + high) >> 1; if (frames[mid].start_s <= player.currentTime) low = mid + 1; else high = mid; }
   return Math.max(0, low - 1);
 }
-function time() { return exact === null ? player.currentTime : session.video_manifest.frames[exact].start_s; }
+function time() { return exact === null ? Math.min(player.currentTime,session.video_manifest.duration_s) : session.video_manifest.frames[exact].start_s; }
 function clock() { if (!session) return; $('clock').textContent = `${fmt(time())} s · frame ${frameIndex()}`; $('seek').value = frameIndex(); }
 function showFrame(index) {
   exact = Math.max(0, Math.min(session.video_manifest.frames.length - 1, index)); player.pause();
   const f = session.video_manifest.frames[exact]; player.currentTime = f.start_s;
-  $('exact-frame').src = `/api/stereotypy/sessions/${session.id}/frame/${exact}`; $('exact-frame').hidden = false; clock();
+  $('exact-frame').src = `/api/stereotypy/sessions/${session.id}/frame/${exact}${$('cage-view')?.value==='review'?'?crop=cage':''}`; $('exact-frame').hidden = false; clock();
 }
 player.addEventListener('timeupdate', clock);
 player.addEventListener('play', () => { exact = null; $('exact-frame').hidden = true; });
@@ -158,4 +159,5 @@ window.addEventListener('beforeunload', event => { if (dirty) { event.preventDef
  $('recording-setup').querySelector('.recording-next').before($('stereo-view-check'));
  $('side-view').onchange=()=>{queue.view_confirmed=$('side-view').checked;saveQueue().catch(e=>notice(e.message,true));};
  await inventory();
+ const requestedSession=new URLSearchParams(location.search).get('session');if(requestedSession)await load(requestedSession);
 })().catch(e=>notice(e.message,true));

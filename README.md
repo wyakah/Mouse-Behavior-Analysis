@@ -143,9 +143,11 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ### Side-view stereotypy development
 
-The shared test-selection screen opens a manual side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, and rearing intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic detectors report **model required**. No side-view recognition has been trained or validated. These capabilities are integrated into `main`; use the normal app launch and select Stereotypy.
+The shared test-selection screen opens a side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, rearing, jumping, and circling intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic behavior classifiers report **model required**. No side-view behavior recognition has been trained or validated.
 
-See [the research, integration plan, milestones, and current limits](docs/stereotypy-research-and-plan.md). Definitions are a draft for lab review. Experimental side-view recordings have not yet been supplied.
+The real 745 and 729 recordings now have a [feasibility assessment, pretrained comparisons, and training plan](docs/stereotypy-feasibility-745-729.md). See also the [original research and integration plan](docs/stereotypy-research-and-plan.md). Definitions remain a draft for lab review.
+
+**Focus on the cage** lets you draw or enter cage bounds, set a bedding reference, and build a full-recording review video with experimental body proposals. The app offers systematic and movement-based review clips, per-frame feature CSVs, and run provenance. These untrained image heuristics require a fixed camera and one dark mouse on a contrasting background. Proposal coverage is not tracking accuracy; upright candidates are not confirmed rearing. Suggested clips never create behavior annotations. Exact source-frame controls remain authoritative; timestamp rounding corrections and true gaps are audited.
 
 Open `http://127.0.0.1:8765/stereotypy`. Upload up to 20 recordings, enter mouse ID, sex, and genotype, then continue to review. Mark intervals with onset/offset controls (`I` / `O` outside form fields), use source-frame buttons for precise boundaries, enter an annotator ID, and save a revision. Unmarked time stays unreviewed; use **Absent** only after explicitly reviewing that behavior. Exports contain the saved revision and retain earlier history. Media, annotations, and outputs stay local and ignored by Git.
 

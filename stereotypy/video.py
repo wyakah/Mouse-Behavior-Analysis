@@ -6,7 +6,7 @@ from threechamber.core import sha256
 def index_video(path):
     signature = path.stat()
     digest = sha256(path)
-    frames, gaps = [], []
+    frames, gaps, corrections = [], [], []
     with av.open(str(path)) as container:
         stream = container.streams.video[0]
         info = dict(width=stream.width, height=stream.height, time_base=str(stream.time_base),
@@ -25,8 +25,20 @@ def index_video(path):
                 end = start + float(frame.duration * frame.time_base)
                 if frames:
                     previous = frames[-1]
-                    if start <= previous["start_s"] or start < previous["end_s"] - 1e-7:
+                    if start <= previous["start_s"]:
                         raise ValueError("Source frame intervals overlap or timestamps are not increasing.")
+                    overlap = previous['end_s'] - start
+                    if overlap > 1e-7:
+                        # The supplied MOV files have small PTS/duration disagreements
+                        # of one or two 1/600s ticks. Cap only that bounded discrepancy;
+                        # never move PTS or tolerate overlaps >10% of a frame interval.
+                        tolerance=min(2*float(frame.time_base),.1*(previous['end_s']-previous['start_s']))
+                        if overlap > tolerance + 1e-7:
+                            raise ValueError("Source frame intervals overlap beyond the two-tick / 10% tolerance.")
+                        corrections.append(dict(frame_id=previous['frame_id'],
+                                                declared_end_s=previous['end_s'], end_s=start,
+                                                reason='bounded_duration_overlap'))
+                        previous['end_s'] = start
                     if start > previous["end_s"] + 1e-7:
                         gaps.append([previous["end_s"], start])
                 frames.append(dict(frame_id=len(frames), start_s=start, end_s=end, pts=frame.pts))
@@ -41,5 +53,6 @@ def index_video(path):
                 source_mtime_ns=signature.st_mtime_ns, source_origin_s=origin,
                 duration_s=frames[-1]["end_s"], frame_count=len(frames),
                 variable_frame_rate=len(durations) > 1 or bool(gaps),
-                frames=frames, source_gaps=gaps, timing_version="declared-frame-duration-v1")
+                frames=frames, source_gaps=gaps, duration_corrections=corrections,
+                timing_version="declared-duration-bounded-cap-v3")
     return info

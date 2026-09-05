@@ -1,6 +1,6 @@
 # Stereotypy: side-view research and implementation plan
 
-Prepared 5 September 2026. Status: research complete for the initial architecture; manual-scoring foundation implemented; experimental videos and recognition validation pending.
+Prepared 5 September 2026. Historical initial plan. **Update:** recordings 745 and 729 have now been inspected and used for cage review and pretrained pose trials. Jumping and circling have been added to the draft ethogram. See the [current feasibility findings and next training cycle](stereotypy-feasibility-745-729.md); statements below about footage not yet being supplied describe the initial state. Behavior recognition validation remains pending.
 
 Integration update: synchronized with `main`'s assay selection, mouse metadata, group statistics, and compact previews (`861a07f`). The shared **Choose your test** screen now opens either Three Chamber or Stereotypy; the side-view page returns via **Choose test**. Three Chamber drafts/statistical settings and Stereotypy sessions remain independent. Explicit navigation to test selection is honored even while a chamber batch is running. The original branch-isolation details below describe the initial development, before integration back into `main`.
 

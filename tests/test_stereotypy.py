@@ -178,7 +178,7 @@ def test_revision_export_and_exact_frame_end_to_end(client):
         assert summary[1]["active_seconds"] == ""
         manifest = json.loads(archive.read("run_manifest.json"))
         assert manifest["predictions_available"] is False
-        assert set(manifest["implementation_sha256"]) == {"core.py", "video.py", "api.py"}
+        assert set(manifest["implementation_sha256"]) == {"core.py", "video.py", "api.py", "cage.py", "pilot.py"}
         assert manifest["package_versions"]["av"]
         assert len(manifest["session"]["revisions"]) == 2
     with zipfile.ZipFile(BytesIO(second_export.data)) as archive:

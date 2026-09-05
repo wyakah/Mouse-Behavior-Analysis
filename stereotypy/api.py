@@ -18,10 +18,12 @@ from threechamber.recordings import validate_recordings
 from threechamber.batch import save_json
 from .core import BEHAVIORS, LABELS, ETHOGRAM_VERSION, number, validate_annotations, measure
 from .video import index_video
+from .cage import validate_mapping, crop_frame
+from .pilot import run_pilot
 
 # Capture the implementation loaded by this process, even if files change later.
 IMPLEMENTATION_HASHES = {name: sha256(Path(__file__).with_name(name))
-                         for name in ("core.py", "video.py", "api.py")}
+                         for name in ("core.py", "video.py", "api.py", "cage.py", "pilot.py")}
 
 
 def utc_now():
@@ -63,6 +65,15 @@ def register_stereotypy(app, root_getter, pool, jobs):
         if not path.is_file():
             abort(404)
         record = json.loads(path.read_text())
+        if record["ethogram_version"] == 'side-view-draft-1':
+            # Add requested classes without relabeling or changing any prior interval.
+            # Previous immutable exports retain their original four-class definitions.
+            record.setdefault('ethogram_history',[]).append(dict(
+                version=record['ethogram_version'],definitions=record.get('definitions',{}),
+                upgraded_at=utc_now(),reason='Add jumping and circling; existing intervals unchanged.'))
+            record['ethogram_version']=ETHOGRAM_VERSION
+            record['definitions']=dict(BEHAVIORS)
+            save(record)
         if record["ethogram_version"] != ETHOGRAM_VERSION:
             raise ValueError("This session uses a different ethogram version; an explicit migration is required.")
         return record
@@ -213,6 +224,62 @@ def register_stereotypy(app, root_getter, pool, jobs):
             save(record)
         return jsonify(public(record))
 
+    @app.post("/api/stereotypy/sessions/<sid>/cage")
+    def save_cage(sid):
+        data=payload()
+        with lock:
+            record=load(sid);check_source(record)
+            info=record['video_manifest']
+            if info['rotation_degrees'] != 0:
+                raise ValueError('Rotated footage needs orientation verification before cage mapping.')
+            if data.get('revision') != record.get('cage_revision',0):
+                return jsonify(error='Cage mapping changed in another tab. Reload before saving.'),409
+            mapping=validate_mapping(data.get('mapping'),info['width'],info['height'])
+            if mapping==record.get('cage_mapping'):
+                return jsonify(mapping=mapping,revision=record['cage_revision'])
+            record['cage_revision']=record.get('cage_revision',0)+1
+            record['cage_mapping']=mapping
+            record.setdefault('cage_history',[]).append(dict(revision=record['cage_revision'],changed_at=utc_now(),mapping=mapping))
+            save(record)
+        return jsonify(mapping=mapping,revision=record['cage_revision'])
+
+    @app.post("/api/stereotypy/sessions/<sid>/cage/analyze")
+    def analyze_cage(sid):
+        with lock:
+            record=load(sid);path=check_source(record)
+            if not record.get('cage_mapping'):raise ValueError('Save the cage mapping first.')
+            active=next((j for j in jobs.values() if j.get('cage_session')==sid and j['status'] in ('queued','running')),None)
+            if active:return jsonify(active),202
+            runid=uuid.uuid4().hex
+            jobid='cage-'+runid[:12]
+            jobs[jobid]=dict(id=jobid,status='queued',message='Cage review queued',cage_session=sid)
+        destination=root()/'outputs/stereotypy'/sid/runid
+        def work():
+            try:
+                jobs[jobid].update(status='running',message='Building cage background')
+                result=run_pilot(path,record['cage_mapping'],destination,record['video_manifest'],
+                    lambda n,total:jobs[jobid].update(message=f'Cage review: {n:,} / {total:,} frames',completed_frames=n,total_frames=total))
+                run=dict(id=runid,created_at=utc_now(),cage_revision=record.get('cage_revision',0),
+                         directory=str(destination.relative_to(root())),result=result)
+                with lock:
+                    latest=load(sid);latest.setdefault('cage_runs',[]).append(run);save(latest)
+                jobs[jobid].update(status='complete',message='Cage review ready; behavior scores require review.',run=run)
+            except Exception as exc:jobs[jobid].update(status='failed',message=str(exc))
+        pool.submit(work)
+        return jsonify(jobs[jobid]),202
+
+    @app.get("/api/stereotypy/sessions/<sid>/cage/<runid>/<filename>")
+    def cage_artifact(sid,runid,filename):
+        if filename not in ('review.mp4','poster.jpg','background.jpg','manifest.json','frame-features.csv','review-windows.json'):
+            abort(404)
+        with lock:record=load(sid)
+        check_source(record)
+        run=next((r for r in record.get('cage_runs',[]) if r['id']==runid),None)
+        if run is None:abort(404)
+        path=(root()/run['directory']/filename).resolve()
+        if not path.is_relative_to(root()/'outputs') or not path.is_file():abort(404)
+        return send_file(path,conditional=True,as_attachment=request.args.get('download')=='1')
+
     @app.get("/api/stereotypy/sessions/<sid>/frame/<int:frame_id>")
     def exact_frame(sid, frame_id):
         import av
@@ -229,7 +296,10 @@ def register_stereotypy(app, root_getter, pool, jobs):
             for frame in container.decode(stream):
                 if frame.pts == target:
                     import cv2
-                    ok, encoded = cv2.imencode(".jpg", frame.to_ndarray(format="bgr24"))
+                    image=frame.to_ndarray(format="bgr24")
+                    if request.args.get('crop')=='cage' and record.get('cage_mapping'):
+                        image=crop_frame(image,record['cage_mapping'])
+                    ok, encoded = cv2.imencode(".jpg", image)
                     if not ok:
                         raise ValueError("Could not encode review frame.")
                     return send_file(BytesIO(encoded.tobytes()), mimetype="image/jpeg")

@@ -2,12 +2,14 @@
 from collections import defaultdict
 import math
 
-ETHOGRAM_VERSION = "side-view-draft-1"
+ETHOGRAM_VERSION = "side-view-draft-2"
 BEHAVIORS = {
     "grooming": "Self-directed paw washing, face/head sweeps, or licking/nibbling own fur. Exclude feeding, drinking, and isolated scratching.",
     "digging": "Repeated forepaw scraping of bedding with substrate displacement. Exclude walking, sniffing, and nest carrying.",
     "gnawing_nonfood": "Repeated visible oral movements contacting an identified nonfood object. Proximity alone is insufficient; exclude food chewing and drinking.",
     "rearing": "Forequarters raised with forepaws off the substrate; may overlap another behavior.",
+    "jumping": "An upward leap with visible loss of hindpaw contact with the substrate or support, followed by landing. Exclude rearing and climbing with continuous support; mark ambiguous when takeoff or landing is hidden.",
+    "circling": "A completed approximately 360-degree locomotor turn in a consistent direction, judged across consecutive frames. Exclude ordinary partial turns, head turns and back-and-forth travel. Mark ambiguous when the view cannot establish completion; record direction and repeated sequences in the note.",
 }
 LABELS = ("present", "absent", "unobservable", "ambiguous", "unreviewed")
 KNOWN = {"present", "absent"}
