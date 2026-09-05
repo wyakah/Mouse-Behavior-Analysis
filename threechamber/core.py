@@ -167,6 +167,9 @@ def load_tracks(path,nose='nose',center='center',scorer=None,individual=None):
     for k in ['nose','center']:
         p=out[f'{k}_likelihood'].to_numpy()
         if ((p[np.isfinite(p)]<0)|(p[np.isfinite(p)]>1)).any(): raise ValueError('Likelihood must be between 0 and 1.')
+    # Optional auxiliary landmark for review; never required for occupancy/cup scoring.
+    if all('tail_base_'+c in df for c in ('x','y','likelihood')):
+        for c in ('x','y','likelihood'):out['tail_base_'+c]=pd.to_numeric(df['tail_base_'+c],errors='coerce').to_numpy()
     return out
 
 def score(tracks,t,dt,cfg):
@@ -271,10 +274,11 @@ def bouts(rows):
             records.append(dict(behavior=kind,start_frame=int(a),end_frame_exclusive=int(b),start_s=float(max(rows.iloc[a].time_s,rows.attrs.get('start_s',0))),duration_s=float(rows.iloc[a:b].duration_s.sum())))
     return pd.DataFrame(records,columns=['behavior','start_frame','end_frame_exclusive','start_s','duration_s'])
 
-def review_video(video,rows,cfg,destination,progress=lambda x:None):
+def review_video(video,rows,cfg,destination,progress=lambda x:None,live=None):
     """Preserve every source frame and its timestamps in an H.264 review video (no audio)."""
     from fractions import Fraction
     H,cups,w,h,bounds=analysis_geometry(cfg); inv=np.linalg.inv(H)
+    if live:live.phase('rendering','Writing the annotated review video',len(rows))
     drawn_zones=cfg.get('analysis_mode') in ('drawn_zones','circle_zones')
     region_key='interaction_zones' if drawn_zones else 'cups'
     source_regions=circle_polygons(cfg['cup_circles']) if cfg.get('analysis_mode')=='circle_zones' else cfg.get(region_key,{})
@@ -304,6 +308,8 @@ def review_video(video,rows,cfg,destination,progress=lambda x:None):
         for i,frame in enumerate(strict_frames(source,ins)):
             if i>=len(rows): raise ValueError('Review frame count exceeds tracking rows.')
             im=frame.to_ndarray(format='bgr24'); r=rows.iloc[i]
+            if live and (live.due() or i==len(rows)-1):
+                live.frame(im,i,r.time_s,row=r.to_dict(),force=i==len(rows)-1)
             for side,color in [('left',(200,180,70)),('right',(100,180,245))]:
                 if side in contours:
                     cv2.polylines(im,[contours[side]],True,color,2)
@@ -332,6 +338,8 @@ def review_video(video,rows,cfg,destination,progress=lambda x:None):
 def analyze(video,tracks_path,cfg,outdir,progress=lambda s:None):
     outdir=Path(outdir); outdir.mkdir(parents=True,exist_ok=False)
     try:
+        live=getattr(progress,'live',None)
+        if live:live.phase('scoring','Reading source timestamps and calculating measurements')
         progress('Reading source timestamps'); t,dt=timeline(video)
         tracks=load_tracks(tracks_path,cfg.get('nose_bodypart','nose'),cfg.get('center_bodypart','center'),cfg.get('scorer') or None,cfg.get('individual') or None)
         rows,summary=score(tracks,t,dt,cfg); rows.attrs['start_s']=summary['window_start_s']
@@ -342,7 +350,7 @@ def analyze(video,tracks_path,cfg,outdir,progress=lambda s:None):
         (outdir/'summary.json').write_text(json.dumps(summary,indent=2,allow_nan=False))
         (outdir/'calibration.json').write_text(json.dumps(cfg,indent=2,allow_nan=False))
         progress('Rendering annotated review video')
-        review_video(video,rows,cfg,outdir/'review.mp4',lambda p:progress(f'Rendering review: {p:.0%}'))
+        review_video(video,rows,cfg,outdir/'review.mp4',lambda p:progress(f'Rendering review: {p:.0%}'),live=live)
         progress('Hashing source files')
         method={'chambers_only':'Body-center chamber occupancy in rectified unit-square; cup metrics not requested.', 'circle_zones':'Free-subject nose inside two image-space circles with one shared diameter, exact radial boundary included; body-center chamber occupancy. No physical distance inferred.', 'drawn_zones':'Free-subject nose inside selected image-space interaction zones, boundary included; body-center chamber occupancy. Zone proximity is a behavioral proxy; no physical distance is inferred.'}.get(cfg.get('analysis_mode'),'Nose in external 0–1 cm cup ring; body-center chamber occupancy.')
         manifest={'version':VERSION,'video':str(Path(video).resolve()),'video_sha256':sha256(video),'tracks':str(Path(tracks_path).resolve()),'tracks_sha256':sha256(tracks_path),'method':method+' No interpolation; actual PTS durations.','reference':'https://doi.org/10.1016/j.heliyon.2024.e36352','status':'complete','review':'All source frames retained; silent H.264, original presentation timestamps.','validation':'Outputs require manual tracking and geometry review before scientific use.'}

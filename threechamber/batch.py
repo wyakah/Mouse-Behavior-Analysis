@@ -2,10 +2,11 @@
 from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
-import json, os, subprocess, uuid, re, shutil
+import json, os, subprocess, uuid, re, shutil, time
 from flask import request,jsonify,send_from_directory
 from threechamber.core import analysis_geometry,metadata,analyze,sha256,propose_circles
 from threechamber.preparation import prepare_trial
+from threechamber.live import LivePublisher,atomic_json
 
 
 def save_json(path,value):
@@ -49,12 +50,14 @@ def validate_batch(root,draft):
 
 
 def get_tracks(root,working,dest,progress):
+    live=getattr(progress,'live',None)
     digest=sha256(working)
     for manifest in sorted((root/'outputs/dlc').glob('*/selection_manifest.json')):
         try:m=json.loads(manifest.read_text())
         except (ValueError,OSError):continue
         tracks=manifest.parent/'selected_tracks.csv'
         if m.get('source_sha256')==digest and m.get('coordinate_space')=='full_source_pixels' and tracks.is_file():
+            if live:live.phase('cached','Using predictions verified against this recording')
             progress('Reusing predictions verified against this video’s content hash')
             return tracks
     interpreter=Path(os.environ.get('DLC_PYTHON',str(root/'.dlc-env/bin/python')))
@@ -63,10 +66,12 @@ def get_tracks(root,working,dest,progress):
     env=os.environ.copy()
     for key,value in {'MPLCONFIGDIR':'.cache/matplotlib','TORCH_HOME':'.cache/torch','HF_HOME':'.cache/huggingface','XDG_CACHE_HOME':'.cache'}.items():env[key]=str(root/value)
     env['DLC_LIGHT']='True'
+    if live and not live.disabled:env['THREECHAMBER_LIVE_DIR']=str(live.folder)
     with (dest/'inference.log').open('w') as log:
         progress('Locating the free subject')
         subprocess.run([str(root/'.venv/bin/python'),str(root/'scripts/localize_video.py'),'--video',str(working),'--output',str(dest/'localization')],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT,env=env)
         progress('DeepLabCut nose and body-center inference')
+        if live:live.phase('tracking','Starting DeepLabCut and loading the pose model')
         subprocess.run([str(interpreter),str(root/'scripts/roi_inference.py'),'--video',str(working),'--proposals',str(dest/'localization/proposals.json'),'--output',str(dest)],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT,env=env)
     return dest/'selected_tracks.csv'
 
@@ -93,12 +98,24 @@ def export_workbook(root,batch,folder):
 def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyzer=analyze):
     root=Path(root);folder=root/'batches'/batch['id'];folder.mkdir(parents=True,exist_ok=True)
     def persist():save_json(folder/'batch.json',batch)
-    batch.update(status='running',message='Starting batch');persist()
+    batch.update(status='running',message='Starting batch',started_at=time.time());persist()
+    live=None
     for i,e in enumerate(batch['entries']):
+        live=None
         e['status']='running';batch['current_index']=i
         def progress(message):
             batch['message']=f'{i+1}/{len(batch["entries"])} · {e["id"]}: {message}';persist()
         try:
+            info=metadata(inside(root,e['video']))
+            context=dict(batch_id=batch['id'],recording_index=i,recording_id=e['id'],recording_count=len(batch['entries']),
+                         source_duration_s=min(600,info['duration_seconds']),source_size=[info['width'],info['height']],cutoff=e['config'].get('pcutoff',.6),
+                         crop=json.loads((root/'profiles/ethovision_three_chamber.json').read_text())['crop_xyxy'],
+                         geometry={k:e['config'][k] for k in ('arena','dividers_fraction','cup_circles')})
+            live=LivePublisher(folder/'live',context)
+            try:atomic_json(live.folder/'context.json',context)
+            except OSError:live.disabled=True
+            progress.live=live
+            live.phase('preparing','Preparing the first 10 minutes')
             progress('Preparing the first 600 seconds')
             working=prepare_trial(root,inside(root,e['video']))
             tr=tracker(root,working,root/'outputs/dlc'/f'{batch["id"]}-{i+1:03d}',progress)
@@ -106,18 +123,27 @@ def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyze
             runid=f'{batch["id"]}-{i+1:03d}'
             summary=analyzer(working,tr,cfg,root/'outputs'/runid,progress)
             e.update(status='complete',summary=summary,run_id=runid,working_video=str(working.relative_to(root)),tracks=str(tr.relative_to(root)))
-        except Exception as error:e.update(status='failed',error=str(error))
+        except Exception as error:
+            e.update(status='failed',error=str(error))
+            if live:live.phase('failed','This recording could not be completed')
         persist()
     batch.update(message='Creating the combined Excel workbook');persist()
+    if live:live.phase('exporting','Creating the combined Excel workbook')
     try:
         exporter(root,batch,folder)
         batch.update(status='complete' if all(e['status']=='complete' for e in batch['entries']) else 'complete_with_errors',message='Batch complete. Review the results and Excel workbook.',workbook='results.xlsx')
     except Exception as error:batch.update(status='export_failed',message=f'Video results retained; Excel export failed: {error}')
+    batch['finished_at']=time.time()
+    if live:live.phase(batch['status'],batch['message'])
     persist();return batch
 
 
 def register_batch(app,root_fn,pool):
     active=set()
+    def current_status(batch):
+        if batch['status'] in ('queued','running') and batch['id'] not in active:
+            batch.update(status='interrupted',message='The app restarted during processing. Completed video outputs are preserved; start a new batch to retry.')
+        return batch
     @app.get('/batch')
     def batch_page():return app.send_static_file('batch.html')
     @app.route('/api/batch/draft',methods=['GET','POST'])
@@ -157,14 +183,24 @@ def register_batch(app,root_fn,pool):
         pool.submit(work);return jsonify(batch)
     @app.get('/api/batches')
     def batch_list():
-        return jsonify([json.loads(p.read_text()) for p in sorted((root_fn()/'batches').glob('*/batch.json'),reverse=True)])
+        return jsonify([current_status(json.loads(p.read_text())) for p in sorted((root_fn()/'batches').glob('*/batch.json'),reverse=True)])
     @app.get('/api/batches/<identifier>')
     def batch_status(identifier):
         p=inside(root_fn(),'batches/'+identifier+'/batch.json')
         if not p.exists():raise ValueError('Batch not found.')
-        batch=json.loads(p.read_text())
-        if batch['status'] in ('queued','running') and identifier not in active:batch.update(status='interrupted',message='The app restarted during processing. Completed video outputs are preserved; start a new batch to retry.')
-        return jsonify(batch)
+        response=jsonify(current_status(json.loads(p.read_text())));response.headers['Cache-Control']='no-store';return response
+    @app.get('/api/batches/<identifier>/live')
+    def batch_live(identifier):
+        folder=inside(root_fn(),'batches/'+identifier)
+        if not (folder/'batch.json').is_file():raise ValueError('Batch not found.')
+        batch=current_status(json.loads((folder/'batch.json').read_text()))
+        try:snapshot=json.loads((folder/'live/snapshot.json').read_text())
+        except (OSError,ValueError):snapshot=None
+        if snapshot and (snapshot.get('batch_id')!=identifier or snapshot.get('recording_index')!=batch.get('current_index')):snapshot=None
+        unchanged=bool(snapshot and request.args.get('since')==snapshot['revision'])
+        if snapshot and (unchanged or request.args.get('image','1')=='0'):snapshot.pop('image',None)
+        response=jsonify(batch_id=identifier,status=batch['status'],snapshot=snapshot,unchanged=unchanged,server_time=time.time())
+        response.headers['Cache-Control']='no-store';return response
     @app.get('/batches/<identifier>/results.xlsx')
     def batch_download(identifier):
         return send_from_directory(inside(root_fn(),'outputs/'+identifier),'results.xlsx',as_attachment=True)

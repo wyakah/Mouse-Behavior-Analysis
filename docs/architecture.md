@@ -9,6 +9,12 @@
 5. The scoring engine combines full-source landmark coordinates with source presentation timestamps. It measures circle membership and chamber occupancy and exports a review video with the same frame timeline.
 6. Recording outputs persist individually. The workbook aggregates summaries, configuration, provenance, and bouts. Errors are retained per recording.
 
+## Live monitoring
+
+An optional publisher replaces `batches/<id>/live/snapshot.json` atomically with one cropped JPEG and matching frame metadata. Localization and review publish from their existing decode loops; DLC pairs its prediction-writer callback with a bounded, thread-safe cache of arena crops sized for its inference prefetch queue. There is no second video decode for the preview. Encoding is throttled to two updates per second, with a final-frame update at the end of a pass.
+
+The live API omits unchanged images and rejects snapshots belonging to a different recording. The browser polls without overlapping requests, guards against stale responses, and stops image transfers when the preview is hidden. Completed result videos stay mounted across progress updates. Missing or failed preview telemetry cannot change measurements or terminate scoring. The [live analysis plan](live-analysis-plan.md) documents the experience and verification.
+
 ## Coordinate systems
 
 - Full-source video pixels are authoritative for landmarks and cup circles.

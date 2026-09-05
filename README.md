@@ -10,6 +10,7 @@ A local tool for analyzing three-chamber mouse-behavior recordings from EthoVisi
 - **Matching cup circles:** one shared diameter across both cups and all recordings, with independently movable centers.
 - **Visual region review:** drag cup circles, floor corners, and chamber dividers; confirm each recording before analysis.
 - **Automatic processing:** score the first 600 seconds, or the available duration for shorter recordings. Originals are retained.
+- **Live analysis preview:** watch actual processed arena frames, landmark confidence, processing stages, and the recording queue. Hide the preview or expand it into Focus view while analysis continues.
 - **Subject tracking:** background-based body localization followed by actual DeepLabCut landmark inference.
 - **Three-point labeling:** nose, body center, and tail base. Only manually reviewed frames enter a training export.
 - **Reviewable outputs:** combined workbook, per-frame measurements, bouts, geometry, provenance, and annotated video.
@@ -70,7 +71,9 @@ That directory must contain `node/bin/node` and `node/node_modules/@oai/artifact
 
 1. **Videos:** add one or more recordings, or select existing workspace recordings. The app automatically chooses available prepared trial copies.
 2. **Review regions:** check the recording ID and social/novel cup side. Move the left and right circles over their cup regions; resize either handle to change the common diameter. Check the floor and chamber dividers. Confirm each recording, then click **Analyze**.
-3. **Results:** download the combined Excel table and inspect each annotated video. Detailed exports appear beneath each result.
+3. **Results:** watch the live arena preview as recordings process one at a time. Completed videos become available immediately. When the batch finishes, download the combined Excel table and inspect the annotated videos. Detailed exports appear beneath each result.
+
+The live view samples the latest completed frame at up to two updates per second; analysis still processes every frame. Localization shows a candidate body box. DeepLabCut then supplies nose, body-center, and tail-base predictions: solid markers are above the configured cutoff, dashed markers are uncertain, and missing points are not drawn. Each processing pass has its own progress indicator; this is sampled processing progress, not source-speed playback or a validated accuracy score. Preview failures do not stop scoring. See the [live analysis design and verification notes](docs/live-analysis-plan.md).
 
 Changing the shared diameter or likelihood cutoff clears all region confirmations. Coordinates and reference-frame selection are under **Precise placement & reference image**; the cutoff is under **Advanced tracking settings**. Camera scale and framing must remain consistent across a batch. Matching image resolution alone does not establish matching physical scale.
 

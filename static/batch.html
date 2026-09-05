@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Three Chamber · Analysis workspace</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/batch.css"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Three Chamber · Analysis workspace</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/batch.css"><link rel="stylesheet" href="/static/live.css"></head>
 <body class="batch-body"><a class="skip-link" href="#workspace-main">Skip to workspace</a><main id="workspace-main">
 <header><a class="brand" href="/"><span class="brand-icon">Ⅲ</span><span>Three Chamber<small>ANALYSIS WORKSPACE</small></span></a><span class="local-label">Local video analysis</span></header>
 <div id="batch-notice" role="status" aria-live="polite"></div>
@@ -33,8 +33,9 @@
 <details><summary>Advanced tracking settings</summary><label>Likelihood cutoff<input id="batch-cutoff" type="number" min="0" max="1" step=".05"></label><p>Changing this threshold resets every region review. Low-confidence landmarks remain unscored.</p></details>
 </div></div></section>
 <section id="batch-results" hidden aria-labelledby="results-heading">
-<div class="title-row"><div><div class="step">STEP 3 · RESULTS</div><h1 id="results-heading" tabindex="-1">Review your measurements.</h1><p>Download the combined table and check each recording’s annotated video.</p></div><button data-step="videos">Back to recordings</button></div>
+<div class="title-row"><div><div class="step">STEP 3 · RESULTS</div><h1 id="results-heading" tabindex="-1">Review your measurements.</h1><p id="results-description">Download the combined table and check each recording’s annotated video.</p></div><button data-step="videos">Back to recordings</button></div>
+<section id="live-analysis" class="live-shell" aria-label="Live analysis preview" hidden></section><h2 id="completed-heading" hidden>Completed recordings</h2>
 <div id="batch-progress" class="panel" role="status" aria-live="polite" hidden></div><div id="batch-results-list"></div><div class="panel"><h2>Analysis history</h2><div id="batch-history"></div></div>
 </section>
 <footer class="workspace-footer"><span>Three Chamber · nose-in-circle time and body-center occupancy</span><details><summary>Model tools</summary><a href="/labeling">Review training labels</a><a href="/reports/specialized_results.html">Tracking assessment</a></details></footer>
-</main><script src="/static/geometry.js"></script><script src="/static/batch.js"></script></body></html>
+</main><script src="/static/geometry.js"></script><script src="/static/live.js"></script><script src="/static/batch.js"></script></body></html>

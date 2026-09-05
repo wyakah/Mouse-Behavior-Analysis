@@ -19,9 +19,10 @@ import pandas as pd
 from threechamber.core import strict_frames,sha256
 from threechamber.localization import build_background,ForegroundLocalizer,localization_review_flags,build_review_queue
 from threechamber.subject import validate_profile
+from threechamber.live import LivePublisher
 
 
-def localize_video(video, output, profile_path, samples=61):
+def localize_video(video, output, profile_path, samples=61, live=None):
     video=Path(video).resolve();output=Path(output).resolve();profile_path=Path(profile_path).resolve()
     output.mkdir(parents=True,exist_ok=True)
     profile=json.loads(profile_path.read_text());started=time.time()
@@ -29,6 +30,7 @@ def localize_video(video, output, profile_path, samples=61):
         stream=container.streams.video[0]
         validate_profile(profile,stream.width,stream.height)
         expected_count=stream.frames
+    if live:live.phase('localizing','Building the recording background',expected_count)
     background,noise=build_background(video,profile['crop_xyxy'],samples)
     np.savez_compressed(output/'background.npz',background=background,noise=noise)
     localizer=ForegroundLocalizer(profile,background,noise)
@@ -44,7 +46,9 @@ def localize_video(video, output, profile_path, samples=61):
             timestamp=source_pts-first_pts
             if timestamps and timestamp<=timestamps[-1]:
                 raise ValueError(f'Non-increasing source timestamp at frame {frame_index}.')
-            result=localizer.propose(frame.to_ndarray(format='bgr24'),timestamp,video.name)
+            image=frame.to_ndarray(format='bgr24')
+            result=localizer.propose(image,timestamp,video.name)
+            if live:live.frame(image,frame_index,timestamp,bbox=result.get('bbox_xyxy'),force=frame_index+1==expected_count)
             qc=localization_review_flags(result,profile);step=None;speed=None
             if result['status']=='proposal':
                 xy=np.array(result['support_xy'])
@@ -98,6 +102,6 @@ def main():
     p.add_argument('--profile',default=str(ROOT/'profiles/ethovision_three_chamber.json'));p.add_argument('--background-samples',type=int,default=61)
     args=p.parse_args()
     if args.background_samples<10:p.error('Use at least 10 background samples.')
-    localize_video(args.video,args.output,args.profile,args.background_samples)
+    localize_video(args.video,args.output,args.profile,args.background_samples,live=LivePublisher.from_environment())
 
 if __name__=='__main__':main()

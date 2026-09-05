@@ -1,6 +1,9 @@
 const $=s=>document.querySelector(s),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
 let draft={entries:[],diameter_px:110,pcutoff:.6},profile,available=[],current=0,img=new Image(),editMode='circles',drag=null,job=null,saveTimer,saveChain=Promise.resolve(),busy=false,frameToken=0,frameReady=false,adding=false;
 const entry=()=>draft.entries[current];
+const liveView=new LiveAnalysisView($('#live-analysis'));
+let activeJob=null,watchTimer=null,watchGeneration=0,statusRequest=null,resultBatchId=null,resultCards=new Map();
+liveView.onViewResult=async(id,run)=>{await watch(id);document.getElementById('result-'+run)?.scrollIntoView({block:'start',behavior:'smooth'});};
 function notice(text,error=false){$('#batch-notice').textContent=text;$('#batch-notice').className=error?'error':'';}
 async function api(url,body){const r=await fetch(url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||`Request failed (${r.status})`);return data;}
 const guard=fn=>async(...args)=>{try{await fn(...args)}catch(e){notice(e.message,true)}};
@@ -105,10 +108,14 @@ $('#batch-upload').onchange=guard(async e=>{
 });
 function link(text,url){const a=el('a',text);a.href=url;return a;}
 function renderJob(b){
- const panel=$('#batch-progress');panel.hidden=false;panel.replaceChildren(el('h2',b.message));
+ const running=['queued','running'].includes(b.status),panel=$('#batch-progress');panel.hidden=running;panel.replaceChildren();
+ if(liveView.host.hidden||liveView.batch?.id!==b.id)panel.append(el('h2',b.message));
  if(b.workbook){const a=link('Download Excel table',`/batches/${b.id}/results.xlsx`);a.className='export-primary';panel.append(a);}
- const box=$('#batch-results-list');box.replaceChildren();
- for(const e of b.entries){
+ const box=$('#batch-results-list');if(resultBatchId!==b.id){box.replaceChildren();resultCards=new Map();resultBatchId=b.id;}
+ const completed=b.entries.filter(e=>['complete','failed'].includes(e.status));
+ $('#completed-heading').hidden=!running;$('#completed-heading').textContent=completed.length?'Completed recordings':'Completed recordings will appear here';
+ for(const e of completed){
+  const key=JSON.stringify([e.id,e.run_id,e.status,e.error]);if(resultCards.has(key))continue;
   const c=el('article',null,'panel result'),heading=el('div',null,'result-heading');heading.append(el('h2','Recording '+e.id),el('span',e.status));c.append(heading,el('p',e.video.split('/').pop()));
   if(e.summary){
    const s=e.summary,fmt=n=>Number.isFinite(n)?n.toFixed(2)+' s':'—',table=el('table',null,'measurements'),head=el('thead'),hr=el('tr');
@@ -120,11 +127,35 @@ function renderJob(b){
    const details=el('details');details.append(el('summary','Detailed exports & scoring information'),el('p','Nose-in-circle time measures proximity. Low-confidence landmarks are left unscored.'));
    const downloads=el('div',null,'download-links');for(const [label,file] of [['Summary CSV','summary.csv'],['Per-frame CSV','frames.csv'],['Bouts CSV','bouts.csv'],['Annotated video','review.mp4'],['Region settings','calibration.json']])downloads.append(link(label,`/outputs/${e.run_id}/${file}?download=1`));details.append(downloads);c.append(details);
   }
-  if(e.error)c.append(el('p',e.error));box.append(c);
+  if(e.error)c.append(el('p',e.error));if(e.run_id)c.id='result-'+e.run_id;resultCards.set(key,c);box.append(c);
  }
 }
-async function watch(id){if(job!==id)return;busy=true;renderLists();const b=await api('/api/batches/'+id);if(job!==id)return;renderJob(b);if(['queued','running'].includes(b.status)){setTimeout(()=>watch(id).catch(e=>{busy=false;notice(e.message,true);renderLists();}),1800);}else{busy=false;renderLists();historyList();}}
-$('#start-batch').onclick=guard(async()=>{if(busy||adding)return;busy=true;renderLists();try{await save();const b=await api('/api/batches',draft);job=b.id;step('results');await watch(b.id);}catch(e){busy=false;renderLists();throw e;}});
+async function refreshJobs(generation){
+ const controller=new AbortController();statusRequest=controller;
+ const ids=[...new Set([job,activeJob].filter(Boolean))];
+ const responses=await Promise.allSettled(ids.map(async id=>{const r=await fetch('/api/batches/'+id,{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('Could not read analysis progress.');return r.json();}));
+ if(generation!==watchGeneration)return;
+ statusRequest=null;const wasBusy=busy;let retry=false;
+ for(const [i,result] of responses.entries()){
+  if(result.status==='rejected'){if(result.reason.name!=='AbortError'){retry=true;notice('Progress connection interrupted. Reconnecting…',true);}continue;}
+  const b=result.value,running=['queued','running'].includes(b.status);
+  if(b.id===activeJob||(!activeJob&&running)){
+   liveView.updateBatch(b);activeJob=running?b.id:null;
+  }
+  if(b.id===job)renderJob(b);
+ }
+ busy=!!activeJob;if(busy!==wasBusy)renderLists();
+ $('#results-heading').textContent=activeJob?'Analysis, in motion.':'Review your measurements.';
+ $('#results-description').textContent=activeJob?'Watch the latest processed frame as each recording moves through analysis. Completed results appear below.':'Download the combined table and check each recording’s annotated video.';
+ if(activeJob||retry)watchTimer=setTimeout(()=>refreshJobs(generation).catch(e=>notice(e.message,true)),retry?3000:1800);
+ else await historyList();
+}
+async function watch(id){
+ if(!activeJob&&liveView.batch?.id!==id)liveView.host.hidden=true;
+ job=id;watchGeneration++;clearTimeout(watchTimer);watchTimer=null;statusRequest?.abort();statusRequest=null;
+ await refreshJobs(watchGeneration);
+}
+$('#start-batch').onclick=guard(async()=>{if(busy||adding)return;busy=true;renderLists();try{await save();const b=await api('/api/batches',draft);activeJob=b.id;job=b.id;liveView.updateBatch(b);renderJob(b);step('results',true);await watch(b.id);}catch(e){busy=!!activeJob;renderLists();throw e;}});
 async function historyList(){
  const list=await api('/api/batches'),box=$('#batch-history');box.replaceChildren();
  if(!list.length)box.append(el('p','No analyses yet. Add recordings and confirm their regions to create your first results.'));
@@ -138,5 +169,5 @@ guard(async()=>{
  renderAvailable();renderLists();if(entry())loadEntry();else $('#workspace-library').open=true;
  const old={inspect:'videos',calibrate:'regions',analysis:'regions',tracking:'regions'},requested=location.hash.slice(1);step(old[requested]||requested||'videos');
  const list=await historyList();const active=list.find(b=>['running','queued'].includes(b.status));
- if(active){job=active.id;step('results');await watch(active.id);}
+ if(active){activeJob=active.id;job=active.id;liveView.updateBatch(active);step('results');await watch(active.id);}
 })();
