@@ -14,9 +14,9 @@ from threechamber.annotation import AnnotationRenderer
 
 class SegmentWriter:
     """Encode consecutive source frames; each independently playable segment starts at zero."""
-    def __init__(self, folder, cfg, source_size, fps, context, segment_seconds=2.):
+    def __init__(self, folder, cfg, source_size, fps, context, segment_seconds=2., renderer=None):
         self.folder=Path(folder);self.folder.mkdir(parents=True,exist_ok=True)
-        self.renderer=AnnotationRenderer(cfg,source_size)
+        self.renderer=renderer or AnnotationRenderer(cfg,source_size)
         self.fps=Fraction(str(fps)).limit_denominator(100000)
         self.segment_seconds=segment_seconds;self.target=None;self.count=0;self.last_time=-1
         self.expected_frames=context.get('expected_frames')

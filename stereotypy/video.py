@@ -2,6 +2,24 @@
 import av
 from threechamber.core import sha256
 
+def cached_index(root,path):
+    """Reuse timestamps only for byte-identical recordings and the current recipe."""
+    import json
+    signature=path.stat();digest=None
+    for candidate in sorted((root/'outputs').glob('stereo-*/work/*/source-index.json'),reverse=True):
+        try:
+            record=json.loads(candidate.read_text())
+            original=json.loads(candidate.with_name('input.json').read_text())
+            if original.get('source_index_sha256')!=sha256(candidate):continue
+        except (OSError,ValueError):continue
+        if record.get('source_size')!=signature.st_size or record.get('timing_version')!='declared-duration-bounded-cap-v3':continue
+        if digest is None:digest=sha256(path)
+        if record.get('source_sha256')!=digest:continue
+        if (signature.st_size,signature.st_mtime_ns)!=(path.stat().st_size,path.stat().st_mtime_ns):raise ValueError('Source changed during indexing')
+        record['source_mtime_ns']=signature.st_mtime_ns
+        return record
+    return None
+
 
 def index_video(path):
     signature = path.stat()

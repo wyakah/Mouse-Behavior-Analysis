@@ -34,7 +34,10 @@ MAPPINGS={'710':([30,20,546,278],215),'711':([40,20,542,280],222),
 def inputs(path):
     mouse=path.stem.split('_')[0];out=RUN/mouse;out.mkdir(parents=True,exist_ok=True)
     index_path=out/'source-index.json'
-    if not index_path.exists():save_json(index_path,index_video(path))
+    if not index_path.exists():
+        from stereotypy.video import cached_index
+        cached=cached_index(ROOT,path)
+        save_json(index_path,cached if cached is not None else index_video(path))
     full=json.loads(index_path.read_text());stat=path.stat()
     if (stat.st_size,stat.st_mtime_ns)!=(full['source_size'],full['source_mtime_ns']) or sha256(path)!=full['source_sha256']:raise ValueError('Source changed since indexing')
     if full['rotation_degrees']!=0:raise ValueError('Normalize orientation explicitly before analysis')
@@ -174,12 +177,22 @@ def predict(path,mouse,out,index,mapping,device):
     save_json(out/'predictions.json',result);return result
 
 
-def render(path,mouse,out,index,mapping,result):
+def incremental_result(path,out,index,mapping,device):
+    from stereotypy_incremental import prepare
+    return prepare(sys.modules[__name__],path,out,index,mapping,device)
+
+def render(path,mouse,out,index,mapping,result,progress=None,stream_folder=None,prediction_stream=None):
     dest=REPORT/(mouse+'.mp4');partial=REPORT/(mouse+'.partial.mp4');REPORT.mkdir(parents=True,exist_ok=True)
-    bg=background(path,index,mapping);track=[];a,b,c,d=mapping['crop_xyxy'];width=c-a;width-=width%2;height=round((d-b)*width/(c-a)/2)*2
+    bg=background(path,index,mapping);track=[];a,b,c,d=mapping['crop_xyxy'];width=min(1280,c-a);width-=width%2;height=round((d-b)*width/(c-a)/2)*2
     proposer=CageProposer(cv2.resize(bg,(width,height)),mapping)
     # Separate title panel preserves all cage pixels in the review video.
     times=np.array([r['start_s'] for r in result['windows']]);last=None
+    from stereotypy.exclusive import ExclusiveScorer
+    scorer=ExclusiveScorer(result['thresholds']);preview=None
+    if stream_folder:
+        from threechamber.streaming import SegmentWriter
+        from types import SimpleNamespace
+        preview=SegmentWriter(stream_folder,{},[width,height+96],index['nominal_fps'],dict(recording_id=result.get('display_id',mouse),recording_index=result.get('queue_index',0),source_duration_s=index['duration_s'],expected_frames=index['frame_count'],stage='rendering'),renderer=SimpleNamespace(width=width,height=height+96))
     with av.open(str(path)) as source,av.open(str(partial),'w',options={'movflags':'+faststart'}) as output:
         stream=source.streams.video[0];stream.thread_type='AUTO';enc=output.add_stream('libx264',rate=30);enc.width=width;enc.height=height+96;enc.pix_fmt='yuv420p';enc.options={'crf':'28','preset':'veryfast'}
         from fractions import Fraction
@@ -192,18 +205,51 @@ def render(path,mouse,out,index,mapping,result):
             canvas=np.full((height+96,width,3),25,np.uint8);canvas[96:]=crop
             if f['bbox_source']:
                 x1,y1,x2,y2=f['bbox_source'];cv2.rectangle(canvas,(round((x1-a)/(c-a)*width),96+round((y1-b)/(d-b)*height)),(round((x2-a)/(c-a)*width),96+round((y2-b)/(d-b)*height)),(90,220,170) if f['status']=='proposed' else (40,190,245),1)
+            while prediction_stream is not None and (not result['windows'] or t>=result['windows'][-1]['end_s']-1e-8):
+                rows=next(prediction_stream)
+                result['windows'].extend(rows);times=np.array([r['start_s'] for r in result['windows']])
             r=result['windows'][min(len(times)-1,max(0,int(np.searchsorted(times,t,side='right')-1)))];scores=r['scores']
-            cv2.putText(canvas,f'Mouse {mouse}   {int(t)//60:02}:{t%60:04.1f} / 20:00   Body: {f["status"]}',(8,18),0,.42,(245,245,245),1,cv2.LINE_AA)
-            cv2.putText(canvas,'EXPERIMENTAL MODEL CANDIDATES - UNREVIEWED',(8,36),0,.39,(110,195,245),1,cv2.LINE_AA)
+            # Pose remains an independent signal until a joint classifier is validated.
+            pose_samples=r.get('pose_samples',[])
+            if pose_samples:
+                ps=pose_samples[max(0,int(np.searchsorted([p['start_s'] for p in pose_samples],t,side='right')-1))]
+                points=ps['points']
+                for left,right in [('nose','neck_base'),('neck_base','back_middle'),('back_middle','tail_base'),('neck_base','front_left_paw'),('neck_base','front_right_paw')]:
+                    u,v=points.get(left),points.get(right)
+                    if u is not None and v is not None:
+                        cv2.line(canvas,(round(u[0]*width/(c-a)),96+round(u[1]*height/(d-b))),(round(v[0]*width/(c-a)),96+round(v[1]*height/(d-b))),(185,150,70),1)
+                for name,p in points.items():
+                    if p is not None:cv2.circle(canvas,(round(p[0]*width/(c-a)),96+round(p[1]*height/(d-b))),2,(60,230,245) if name=='nose' else (235,170,100),-1)
+            label=scorer.add(t,timing['end_s'],scores,f['status']=='proposed')
+            duration=index['duration_s']; display_id=result.get('display_id',mouse)
+            ticks=int(t*10+1e-7)
+            cv2.putText(canvas,f'Mouse {display_id}   {ticks//600:02}:{ticks%600/10:04.1f} / {int(duration)//60:02}:{int(duration)%60:02}   Body: {f["status"]}',(8,18),0,.42,(245,245,245),1,cv2.LINE_AA)
+            cv2.putText(canvas,'NOW: '+label.replace('_',' ').upper()+' | CUMULATIVE SECONDS',(8,36),0,.39,(110,195,245),1,cv2.LINE_AA)
             for k,cname in enumerate(CLASSES):
-                label={'gnawing_nonfood':'Gnawing'}.get(cname,cname.title());val=scores[cname];color=(90,220,170) if val>=result['thresholds'][cname] else (170,170,170)
-                cv2.putText(canvas,f'{label} {val:.2f}',(8+(k%3)*(width//3),57+(k//3)*19),0,.38,color,1,cv2.LINE_AA)
+                title={'gnawing_nonfood':'Gnawing'}.get(cname,cname.title());val=scorer.seconds[cname];color=(90,220,170) if cname==label else (170,170,170)
+                cv2.putText(canvas,f'{title} {val:.1f}s',(8+(k%3)*(width//3),57+(k//3)*19),0,.38,color,1,cv2.LINE_AA)
+            if preview:
+                try:preview.write(canvas,i,t,timing['end_s']-t,{},annotated=True)
+                except Exception as exc:
+                    print('Live video unavailable; final rendering continues:',exc,flush=True)
+                    try:preview.close(str(exc))
+                    except Exception:pass
+                    preview=None
+            if progress and (i%60==0 or i==index['frame_count']-1):progress(dict(scorer.snapshot(),current_behavior=label,frame_index=i,frames_done=i+1,total_frames=index['frame_count']))
             if i==0:cv2.imwrite(str(REPORT/(mouse+'.jpg')),canvas)
             encoded=av.VideoFrame.from_ndarray(canvas,format='bgr24');encoded.pts=round(t*60000);encoded.time_base=Fraction(1,60000)
             for packet in enc.encode(encoded):output.mux(packet)
             if i%9000==0:print(mouse,'review frames',i,'/',index['frame_count'],flush=True)
         for packet in enc.encode():output.mux(packet)
     if len(track)!=index['frame_count']:raise ValueError('Incomplete annotated video')
+    if preview:
+        try:preview.close()
+        except Exception as exc:
+            result['preview_error']=str(exc)
+            print('Preview finalization failed; final video retained:',exc,flush=True)
+    raw_summary=result['summary'] or summarize_predictions(result['windows'],result['thresholds'],result['duration_s'],result['source_gaps'])[0]
+    result.update(raw_summary=raw_summary,summary=scorer.summary(),bouts=[r for r in scorer.intervals if r['behavior'] in CLASSES],exclusive_intervals=scorer.intervals,
+        scoring_policy='exclusive-highest-qualified-v1',cumulative=scorer.snapshot(),other_seconds=scorer.other)
     partial.replace(dest)
     with (out/'tracking.csv').open('w',newline='') as handle:
         writer=csv.DictWriter(handle,fieldnames=list(track[0]));writer.writeheader();writer.writerows(track)
@@ -212,8 +258,8 @@ def render(path,mouse,out,index,mapping,result):
     result['review_sha256']=sha256(dest);save_json(out/'predictions.json',result)
     # Model-blind systematic body checks, plus behavior candidates for qualitative review.
     audit=[]
-    for t in np.linspace(10,index['duration_s']-10,12):
-        i=int(np.searchsorted([r['start_s'] for r in track],t));audit.append(dict(frame_id=i,**track[i]))
+    for t in np.linspace(0,track[-1]['start_s'],12):
+        i=min(len(track)-1,int(np.searchsorted([r['start_s'] for r in track],t)));audit.append(dict(frame_id=i,**track[i]))
     save_json(out/'tracking-audit.json',audit)
 
 

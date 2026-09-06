@@ -2,7 +2,7 @@
 class RecordingSetup {
   constructor(host, options) {
     this.host=host;this.options=options;this.busy=false;this.available=[];
-    host.innerHTML=`<div class="recording-upload"><label class="button primary">Upload videos<input class="visually-hidden" type="file" multiple accept=".mp4,.avi,.mov,.mkv,.m4v"></label><span data-count></span></div><p class="recording-help">Up to 20 videos. One mouse per video. Files stay on this computer.</p><div class="recording-list"></div><details class="recording-existing"><summary>Choose videos already on this computer</summary><div class="existing-picker"><select aria-label="Workspace video"><option value="">Choose a video</option></select><button data-add>Add video</button></div></details><div class="recording-next"><p data-status role="status"></p><button data-continue class="primary">Continue →</button></div>`;
+    host.innerHTML=`<div class="recording-upload"><label class="button primary">Upload videos<input class="visually-hidden" type="file" multiple accept=".mp4,.avi,.mov,.mkv,.m4v"></label><span data-count></span></div><div class="recording-list"></div><details class="recording-existing"><summary>Choose videos already on this computer</summary><div class="existing-picker"><select aria-label="Workspace video"><option value="">Choose a video</option></select><button data-add>Add video</button></div></details><div class="recording-next"><p data-status role="status"></p><button data-continue class="primary">Continue →</button></div>`;
     this.input=host.querySelector('input[type=file]');this.input.onchange=()=>this.upload([...this.input.files]);
     host.querySelector('[data-add]').onclick=()=>this.addExisting();
     host.querySelector('[data-continue]').onclick=async()=>{try{if(this.valid()&&!this.busy&&!options.disabled?.())await options.continue();}catch(e){this.status(e.message,true);}};
@@ -16,7 +16,7 @@ class RecordingSetup {
     this.host.querySelector('[data-count]').textContent=`${n} / 20 videos`;
     this.input.disabled=disabled||n>=20;this.host.querySelector('[data-add]').disabled=disabled||n>=20||!this.available.some(v=>!this.entries().some(e=>e.video===v.name));
     this.host.querySelector('[data-continue]').disabled=disabled||!this.valid();
-    if(!this.busy)this.status(!n?'Upload videos to begin.':!this.valid()?'Enter a unique mouse ID for each video.':'Sex and genotype can be left as not recorded.');
+    if(!this.busy)this.status(!n?'':!this.valid()?'Enter a unique mouse ID for each video.':'');
   }
   setAvailable(videos){this.available=videos;this.renderPicker();this.update();}
   renderPicker(){const select=this.host.querySelector('.existing-picker select');select.replaceChildren(new Option('Choose a video',''));for(const v of this.available)if(!this.entries().some(e=>e.video===v.name))select.add(new Option(v.label||v.name.split('/').pop(),v.name));}

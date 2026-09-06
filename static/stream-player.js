@@ -63,7 +63,7 @@ class AnalysisStreamPlayer {
     if(this.hidden)return;
     const controller=new AbortController();this.controller=controller;let again=true;
     try {
-      const response=await fetch(`/api/batches/${encodeURIComponent(this.batchId)}/video/${this.index}`,{cache:'no-store',signal:controller.signal});
+      const response=await fetch(`${this.apiBase||'/api/batches'}/${encodeURIComponent(this.batchId)}/video/${this.index}`,{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw new Error('Preview connection interrupted. Reconnecting…');
       const packet=await response.json();if(epoch!==this.epoch)return;
       const manifest=packet.manifest;

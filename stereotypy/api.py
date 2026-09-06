@@ -123,9 +123,16 @@ def register_stereotypy(app, root_getter, pool, jobs):
             revision=current["revision"], annotations=current["annotations"], summary=summary,
             bouts=bouts, detector_status="model_required", ethogram=BEHAVIORS, labels=LABELS)
 
+    from .automatic import register_automatic
+    register_automatic(app,root_getter,pool)
+
     @app.get("/stereotypy")
     def stereotypy_page():
-        return app.send_static_file("stereotypy.html")
+        return app.send_static_file("stereotypy-auto.html")
+
+    @app.get("/stereotypy/review")
+    def stereotypy_manual_page():
+        return app.send_static_file("stereotypy-auto.html")
 
     @app.route("/api/stereotypy/draft", methods=["GET", "POST"])
     def recording_draft():

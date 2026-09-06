@@ -42,16 +42,24 @@ def test_segments_preserve_every_variable_rate_frame_and_duration(tmp_path):
     assert not list(tmp_path.glob('*.part'))
 
 
+def test_renderer_cumulative_seconds_count_each_scored_frame_once():
+    renderer=AnnotationRenderer(circle_cfg(),[300,200]);image=np.zeros((200,300,3),np.uint8)
+    row=dict(chamber='left',duration_s=.2,nose_scoreable=True,left_interaction=True,right_interaction=False)
+    renderer.draw(image,0,0,row);renderer.draw(image,0,0,row)
+    renderer.draw(image,1,.2,dict(row,chamber='center',duration_s=.3,left_interaction=False))
+    assert renderer.totals['left']==.2 and renderer.totals['center']==.3
+    assert renderer.totals['left_nose']==.2 and renderer.totals['right_nose']==0
+
 def test_renderer_uses_identical_coordinates_for_source_and_crop():
     cfg=dict(circle_cfg(),review_crop_xyxy=[10,10,290,190]);renderer=AnnotationRenderer(cfg,[300,200])
     image=np.full((200,300,3),80,np.uint8)
     row=dict(nose_x=55,nose_y=110,nose_likelihood=.99,center_x=70,center_y=120,center_likelihood=.2,tail_base_x=90,tail_base_y=130,tail_base_likelihood=float('nan'))
     full=renderer.draw(image,4,.2,row);crop=renderer.draw(image[10:190,10:290],4,.2,row,True)
     np.testing.assert_array_equal(full,crop)
-    np.testing.assert_array_equal(full[110-10+82,55-10],renderer.COLORS['nose'])
-    assert full.shape==(262,280,3)
+    np.testing.assert_array_equal(full[110-10+106,55-10],renderer.COLORS['nose'])
+    assert full.shape==(286,280,3)
     # Missing points are absent; a low-confidence center never gets a solid marker.
-    assert not np.array_equal(full[120-10+82,70-10+2],renderer.COLORS['center'])
+    assert not np.array_equal(full[120-10+106,70-10+2],renderer.COLORS['center'])
 
 
 def test_stream_rejects_gaps_instead_of_silently_skipping_frames(tmp_path):

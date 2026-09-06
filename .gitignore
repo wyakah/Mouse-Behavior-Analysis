@@ -49,3 +49,5 @@ tmp/
 .idea/
 .vscode/
 node_modules/
+
+.labgym-env/

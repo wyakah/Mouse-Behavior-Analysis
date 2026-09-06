@@ -1,3 +1,4 @@
+fetch('/reports/stereotypy-robustness/comparison.json',{method:'HEAD'}).then(r=>{if(r.ok)document.getElementById('stereotypy-robustness-link').hidden=false;}).catch(()=>{});
 'use strict';
 fetch('/reports/stereotypy-five-video/results.json',{method:'HEAD'}).then(r=>{if(r.ok)document.getElementById('stereotypy-batch-link').hidden=false;}).catch(()=>{});
 const $ = id => document.getElementById(id);

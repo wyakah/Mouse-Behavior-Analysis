@@ -10,12 +10,14 @@ class AnnotationRenderer:
     def __init__(self, cfg, source_size):
         from threechamber.core import analysis_geometry, circle_polygons, transform
         self.cfg, self.source_size = cfg, source_size
+        self.totals=dict.fromkeys(['left','center','right','left_nose','right_nose'],0.)
+        self.last_index=-1
         self.crop = list(map(int, cfg.get('review_crop_xyxy', [0,0,*source_size])))
         x1,y1,x2,y2 = self.crop
         if not 0<=x1<x2<=source_size[0] or not 0<=y1<y2<=source_size[1]:
             raise ValueError('Review crop outside source frame.')
         self.width = (x2-x1+1)//2*2
-        self.height = (y2-y1+82+1)//2*2
+        self.height = (y2-y1+106+1)//2*2
         H,cups,w,h,bounds = analysis_geometry(cfg)
         inverse = np.linalg.inv(H)
         self.floor = np.rint(np.asarray(cfg['arena'])-[x1,y1]).astype(np.int32)
@@ -34,6 +36,12 @@ class AnnotationRenderer:
                 self.rings[side]=[np.rint(transform(c.reshape(-1,2)/scale,inverse)-[x1,y1]).astype(np.int32) for c in cs]
 
     def draw(self, image, index, time_s, row, image_is_crop=False):
+        if index>self.last_index and 'chamber' in row:
+            dt=max(0,float(row.get('duration_s',0)))
+            if row['chamber'] in ('left','center','right'):self.totals[row['chamber']]+=dt
+            for side in ('left','right'):
+                if row.get('nose_scoreable') and row.get(side+'_interaction'):self.totals[side+'_nose']+=dt
+            self.last_index=index
         x1,y1,x2,y2=self.crop
         if image_is_crop:
             if image.shape[:2]!=(y2-y1,x2-x1):raise ValueError('Preview crop does not match its source geometry.')
@@ -59,9 +67,10 @@ class AnnotationRenderer:
             else:
                 for start in range(0,360,60):cv2.ellipse(im,center,(6,6),0,start,start+30,color,1,cv2.LINE_AA)
                 cv2.drawMarker(im,center,color,cv2.MARKER_TILTED_CROSS,4,1,cv2.LINE_AA)
-        im=cv2.copyMakeBorder(im,82,self.height-im.shape[0]-82,0,self.width-im.shape[1],cv2.BORDER_CONSTANT,value=(26,38,32))
+        im=cv2.copyMakeBorder(im,106,self.height-im.shape[0]-106,0,self.width-im.shape[1],cv2.BORDER_CONSTANT,value=(26,38,32))
         small=.42 if self.width>=400 else .24
-        cv2.putText(im,f'Frame {index+1:,}   |   {int(time_s//60):02}:{time_s%60:05.2f}',(12,22),cv2.FONT_HERSHEY_SIMPLEX,small,(235,243,236),1,cv2.LINE_AA)
+        ticks=int(time_s*100+1e-7)
+        cv2.putText(im,f'Frame {index+1:,}   |   {ticks//6000:02}:{ticks%6000/100:05.2f}',(12,22),cv2.FONT_HERSHEY_SIMPLEX,small,(235,243,236),1,cv2.LINE_AA)
         for i,(name,label) in enumerate([('nose','Nose'),('center','Center'),('tail_base','Tail')]):
             p=points[name];q='missing' if p['likelihood'] is None else f'{p["likelihood"]:.2f}'+(' ?' if p['state']=='uncertain' else '')
             cv2.putText(im,f'{label} {q}',(12+i*(self.width//3),46),cv2.FONT_HERSHEY_SIMPLEX,small,self.COLORS[name],1,cv2.LINE_AA)
@@ -69,4 +78,9 @@ class AnnotationRenderer:
             status='Outside scoring window' if row.get('duration_s',1)<=0 else f'Chamber: {row["chamber"]} | '+(f'Left: {bool(row.get("left_interaction"))}  Right: {bool(row.get("right_interaction"))}' if row.get('nose_scoreable') else 'Nose unscored')
         else:status='Tracking preview | measurements finalize after processing'
         cv2.putText(im,status,(12,70),cv2.FONT_HERSHEY_SIMPLEX,small*.93,(205,219,208),1,cv2.LINE_AA)
+        if 'chamber' in row:
+            t=self.totals
+            text=f'Total s | Chambers L {t["left"]:.1f} C {t["center"]:.1f} R {t["right"]:.1f} | Nose L {t["left_nose"]:.1f} R {t["right_nose"]:.1f}'
+            scale=min(small*.9,(self.width-24)/max(1,cv2.getTextSize(text,0,1,1)[0][0]))
+            cv2.putText(im,text,(12,94),0,scale,(205,219,208),1,cv2.LINE_AA)
         return im

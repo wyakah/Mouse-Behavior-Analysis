@@ -8,7 +8,7 @@ A local tool for analyzing three-chamber mouse-behavior recordings from EthoVisi
 
 - **One workflow for one video or a batch:** Choose test → Videos → Test setup/review → Results. Both tests share the same upload and mouse metadata screen, with up to 20 videos per setup.
 - **Mouse metadata and statistics:** mouse ID, sex, and genotype; descriptive summaries, genotype comparisons, within-sex comparisons, and genotype × sex ANOVA in Excel. One independent mouse per sample ID.
-- **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for side-view manual scoring. Experimental stereotypy models have a separate training and review workflow; automatic measurements still require validation.
+- **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for automatic side-view behavior estimates. Stereotypy models remain experimental; automation does not establish accuracy.
 - **Matching cup circles:** one shared diameter across both cups and all recordings, with independently movable centers.
 - **Visual region review:** drag cup circles, floor corners, and chamber dividers; confirm each recording before analysis.
 - **Automatic processing:** score the first 600 seconds, or the available duration for shorter recordings. Originals are retained.
@@ -72,7 +72,7 @@ That directory must contain `node/bin/node` and `node/node_modules/@oai/artifact
 
 ## Using the app
 
-1. **Choose test:** select Three Chamber, select Stereotypy, or continue your saved Three Chamber setup. Stereotypy opens the side-view reviewer with its own saved sessions; **Choose test** returns to the shared selection screen.
+1. **Choose test:** select Three Chamber, select Stereotypy, or continue your saved Three Chamber setup. Stereotypy opens an automatic video queue; **Choose test** returns to the shared selection screen.
 2. **Videos:** upload up to 20 recordings and enter a unique mouse ID, sex, and genotype in the shared table. Missing sex/genotype remain explicit. Click **Continue**. Three Chamber’s optional Excel comparisons are in the collapsed **Excel statistics** section.
 3. **Regions:** check the social/novel cup side. Move the left and right circles over their cup regions; resize either handle to change the common diameter. Check the floor and chamber dividers. Confirm each recording, then click **Analyze**.
 4. **Results:** follow compact progress as recordings process one at a time; click the thumbnail to watch annotated footage. Completed videos become available immediately. When the batch finishes, download the combined Excel table and inspect the annotated videos. Filter results by sample ID, sex, or genotype. Completed previews are also click-to-play; detailed exports and previous analyses are collapsible.
@@ -141,19 +141,13 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ## Development
 
-### Side-view stereotypy development
+### Automatic stereotypy
 
-Stereotypy now uses **only the first 20 minutes** of each recording (the actual duration for shorter sources). The [five-mouse pilot](docs/stereotypy-five-video-pilot.md) runs frozen models end to end, exports clearly labeled candidate durations without statistics, and renders every included source frame for review. Candidate estimates are kept separate from accepted manual annotations.
+Open `/stereotypy`, upload up to 20 side-view recordings, enter mouse ID, sex and genotype, then click **Analyze videos**. Recordings process sequentially through the frozen six-behavior models. The first 1,200 seconds (or the full shorter source) are included. No annotation session, annotator ID, cage drawing or manual interval scoring is required. The full field of view is retained to avoid cropping out rearing and jumping. At each source interval the highest threshold-qualified behavior score wins; exact ties or unreliable localization are unknown, and intervals with no qualifying behavior are other activity. Head scores are uncalibrated, so this exclusive decision rule is not an accuracy improvement claim.
 
-The shared test-selection screen opens a side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, rearing, jumping, and circling intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic measurements still require an accepted model. A separate [six-behavior training experiment](docs/stereotypy-training.md) fits temporal heads from external labels and demonstrations, with unlabeled adaptation to the supplied recordings. These models are experimental and are not used to populate scored measurements. The [expanded priority-behavior experiment](docs/stereotypy-priority-training.md) adds CBAS and LabGym data, frozen DINOv2 features, validation-only model selection, and explicit precision/recall acceptance checks for grooming, digging, and rearing.
+The results page restores running progress after refresh and provides six provisional exclusive candidate durations, other-activity and unknown time, and the shared collapsible live-video player with running results, combined Excel, scores CSV and interval CSV. Individual failures do not stop the remaining queue. Failed or interrupted batches can be retried. After source indexing and model warmup, inference and rendering advance in eight-second sections. Each section includes the temporal model’s three future samples before its scores are published. Two-second video segments become available while later sections are still being analyzed. Single-video previews open automatically; batch previews start collapsed. Video overlays show cumulative seconds at playback time; result cards show totals through the latest processed time. Exports use the same exclusive intervals, with no double-counted behavior time. Earlier overlapping results remain marked legacy. Three Chamber’s scored overlays also show cumulative chamber and cup-zone time. No statistics are performed.
 
-The real 745 and 729 recordings now have a [feasibility assessment, pretrained comparisons, and training plan](docs/stereotypy-feasibility-745-729.md). See also the [original research and integration plan](docs/stereotypy-research-and-plan.md). Definitions remain a draft for lab review.
-
-**Focus on the cage** lets you draw or enter cage bounds, set a bedding reference, and build a full-recording review video with experimental body proposals. The app offers systematic and movement-based review clips, per-frame feature CSVs, and run provenance. These untrained image heuristics require a fixed camera and one dark mouse on a contrasting background. Proposal coverage is not tracking accuracy; upright candidates are not confirmed rearing. Suggested clips never create behavior annotations. Exact source-frame controls remain authoritative; timestamp rounding corrections and true gaps are audited.
-
-Open `http://127.0.0.1:8765/stereotypy`. Upload up to 20 recordings, enter mouse ID, sex, and genotype, then continue to review. Mark intervals with onset/offset controls (`I` / `O` outside form fields), use source-frame buttons for precise boundaries, enter an annotator ID, and save a revision. Unmarked time stays unreviewed; use **Absent** only after explicitly reviewing that behavior. Exports contain the saved revision and retain earlier history. Media, annotations, and outputs stay local and ignored by Git.
-
-The development preview may contain a video named `SYNTHETIC_timing_demo.mp4` and a `SYNTHETIC` session. These demonstrate software mechanics only; they contain no animal and no scientific observations.
+Automatic scoring requires the locally installed `.dlc-env`, cached DINOv2/MobileNet weights and frozen v1/v2 model artifacts in `outputs/stereotypy-training`. Missing models produce an explicit installation error, never a manual scoring fallback. Models have not met the accuracy target. Unreliable body proposals are excluded automatically; these gates are not accuracy validation. The [training experiments](docs/stereotypy-priority-training.md) and [robustness diagnostics](docs/stereotypy-robustness.md) document limitations. Historical annotation data remain on disk for provenance but are not part of the product flow.
 
 ### Checks
 
@@ -204,4 +198,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development conventions and [docs/arc
 
 Three Chamber and Stereotypy use the same compact upload component and mouse table. File selection beyond the remaining 20-video capacity is rejected before uploading; saved drafts and setup validation also enforce the limit. Editing metadata does not reset Three Chamber region reviews.
 
-Stereotypy saves its queue separately, including mouse ID, sex, genotype, and links to prepared reviews. Confirm single-mouse side-view footage, then continue. Recordings are indexed when opened for manual scoring; use the recording selector or **Next recording** to work through the queue. Session IDs are generated automatically, and apparatus defaults to **Not recorded**. Previous reviews remain available. Metadata edits preserve annotations and are recorded in metadata history; all CSV exports include sex and genotype. Review and Results occupy separate screens; timing and advanced interval controls are collapsed. This does not install automatic behavior detectors.
+Stereotypy saves its upload draft separately and restores persisted automatic batch progress. All exported rows include mouse ID, sex and genotype. Analysis continues while the page is closed.
+
+### Stereotypy pose and motion comparison
+
+See [the robustness workflow](docs/stereotypy-robustness.md) for the separate five-mouse pose, motion, scene and lighting comparison, raw-frame landmark editor, and guarded human-label export/fusion training. These are development diagnostics; local behavior accuracy is not established.
+
+Pose and behavior distinction experiments, automatic anatomical overlays, and the
+measured comparison are documented in [stereotypy distinction](docs/stereotypy-distinction.md).
