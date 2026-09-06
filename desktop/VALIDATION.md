@@ -37,3 +37,15 @@ Local smoke reports and workbooks are retained under `.cache/desktop-smoke/` and
 - Object/Stranger labels are centered at the top inside their rectified chambers. Chamber roles also appear in result tables and Excel; mixed-side batches retain correct per-mouse roles.
 - 194 packaged Python tests, 184 development Python tests (3 skipped), and 9 JavaScript tests passed. Excel regression checks cover uniform and mixed stranger-side batches.
 - Existing saved review videos and buffered previews can be regenerated from their scored frame tables with `scripts/refresh_three_chamber_reviews.py`; previous videos are retained in a local backup. This does not rerun inference or modify scores.
+
+## Version 0.1.4 — Windows x64
+
+- Public repository renamed to `wyakah/Mouse-Behavior-Analysis`; prior GitHub links redirect.
+- Windows Server 2022 CI: 40 targeted engine tests passed. Synthetic six-second videos exercised both assays before and after installation, including real bundled model inference, live MP4 segments, annotated output, and Excel downloads.
+- NSIS per-user installation completed. Native first launch unpacked its verified engine archive, opened the main Behavior Studio window, and exited cleanly on close.
+- Bundles an x64 Python 3.12 CPU runtime, application-local Microsoft C++ redistributable DLLs, and checksum-pinned inference weights. Python/DeepLabCut need no separate installation. WebView2 uses Microsoft's bootstrapper when absent.
+- Windows workspace links use junctions, locking uses Windows file locking, process checks use the Windows API, and quit terminates the owned worker tree.
+- Mac launcher compilation and 184 local Python tests (3 skipped) still pass. The existing Mac v0.1.3 installer remains available; this release adds Windows.
+- The executable is unsigned. Tests establish build/install/functionality on the CI runner, not behavioral accuracy, clean-machine certification across all Windows versions, or GPU acceleration.
+
+Build and installed-app evidence: https://github.com/wyakah/Mouse-Behavior-Analysis/actions/runs/34045345552

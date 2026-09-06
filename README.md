@@ -6,16 +6,20 @@ Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-b
 
 ## Download and install
 
+[**Download the Windows x64 installer (v0.1.4)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.4)
+
 [**Download the Apple Silicon Mac installer (v0.1.3)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.3)
 
 | Platform | Availability |
 | --- | --- |
 | Apple Silicon Mac (M1 or later), macOS 14+ | Development installer available; about 1.2 GB download / 2.2 GB installed |
 | Intel Mac | Not built or tested |
-| Windows x64 | Installer build and validation in progress |
+| Windows 10/11 x64 | Development installer available; bundled CPU inference runtime |
 | Linux | No desktop installer |
 
-1. Open the release above and download `Behavior-Studio-0.1.3-apple-silicon.dmg`.
+### Mac
+
+1. Open the Mac release above and download `Behavior-Studio-0.1.3-apple-silicon.dmg`.
 2. Open the disk image and drag **Behavior Studio** into **Applications**.
 3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
 4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. For Three Chamber, choose the stranger mouse’s left/right position for each recording. Three Chamber additionally requires checking its cup zones and chamber geometry.
@@ -25,9 +29,17 @@ This development build has a local ad-hoc signature, **not an Apple Developer ID
 
 Recordings and results stay on your computer in `~/Library/Application Support/com.wyakah.behaviorstudio/workspace/`. Exported downloads go to Downloads. The app works offline after installation. Its bundled SuperAnimal models are limited to academic, non-commercial use under their [upstream notices](desktop/THIRD_PARTY_NOTICES.md).
 
+### Windows
+
+Download `Behavior-Studio-0.1.4-windows-x64-setup.exe` from the Windows release. Run the installer, then open **Behavior Studio** from the Start menu. It installs for your Windows user account and includes Python, the CPU inference libraries, both assay models, and the Microsoft C++ runtime.
+
+This is an **unsigned development installer** for Windows 10/11 x64. Windows may show an unknown-publisher or SmartScreen prompt. Verify the published SHA-256 checksum and only proceed if you trust this repository. The Microsoft WebView2 bootstrapper needs internet if WebView2 is not already installed; analysis and bundled models run locally afterward. No separate Python or DeepLabCut installation is needed. The first launch takes longer while the engine is unpacked; later launches reuse that local copy.
+
+The installer is tested on a GitHub-hosted Windows Server 2022 runner, including both analysis pipelines, installed-runtime exports, and native startup/quit. Synthetic smoke videos test software operation, not tracking or behavior accuracy. GPU acceleration is not enabled in this Windows CPU build.
+
 ### Why is the installer large?
 
-This first version packages the entire tested analysis environment: about **1.8 GB for Python, native libraries, PyTorch, DeepLabCut and pose weights**, plus **362 MB for the remaining models**. The web interface and native window are a small part. Compression reduces the installed 2.2 GB application to approximately 1.2 GB. There are no laboratory recordings in the installer.
+The Mac build packages the entire tested analysis environment: about **1.8 GB for Python, native libraries, PyTorch, DeepLabCut and pose weights**, plus **362 MB for the remaining models**. The web interface and native window are a small part. Compression reduces the installed 2.2 GB application to approximately 1.2 GB. The Windows installer is about **1.1 GB** and unpacks its engine on first launch. There are no laboratory recordings in either installer.
 
 A smaller future installer can download assay-specific models and omit unused runtime components. That reduces the initial download; models and inference libraries still need local disk space. The Windows build bundles a separate x64 CPU runtime and uses native Windows process management.
 
