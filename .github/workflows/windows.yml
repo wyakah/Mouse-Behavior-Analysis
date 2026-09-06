@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: desktop/runtime-lock.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
