@@ -22,3 +22,11 @@ Local smoke reports and workbooks are retained under `.cache/desktop-smoke/` and
 - Explicit left/right setup, legacy target-side compatibility, timestamp-weighted stranger scoring, missing-data handling, zero denominator, and Excel cell values covered.
 - Packaged Three Chamber HTTP upload → tracking → scoring → live segments → review video → Excel test completed on a four-second mouse 675 excerpt in 40.2 seconds. The selected right-side numerator and summed chamber-time denominator matched the exported percentage.
 - Prior result artifacts are retained; rerun an analysis to produce the new columns and cumulative video overlay. Historical on-screen results can derive the percentage when a target side and valid times were recorded.
+
+## Version 0.1.2 — cumulative live preview
+
+- Packaged runtime: 193 tests passed. Development runtime: 183 passed, 3 skipped. JavaScript: 9 passed.
+- Live pose frames and final results share geometry/classification rules. Regression tests check cumulative SI %, variable frame durations, missing noses, clipped scoring windows, and repeated rendering.
+- A real four-second Three Chamber HTTP upload completed in 52.3 seconds with tracking-stage video segments, metadata in the exported configuration, an annotated review, tracking-quality diagnostics, and an Excel download. Visually checked the tracking-stage MP4 overlay.
+- Overlay-only classification/rendering sustained approximately 244 frames/second on this development Mac; this is not end-to-end model throughput.
+- Automatic diagnostics retain missing-nose gaps and body-in-circle context without imputing nose interaction. Existing reviewed data are insufficient to validate anatomical accuracy; model weights were not changed.

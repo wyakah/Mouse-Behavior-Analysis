@@ -57,7 +57,7 @@ class SegmentWriter:
             raise ValueError('Preview frames must be consecutive with increasing source timestamps.')
         if self.target is not None and time_s-self.start>=self.segment_seconds:self._publish()
         if self.target is None:self._open(index,time_s)
-        im=image if annotated else self.renderer.draw(image,index,time_s,row,image_is_crop)
+        im=image if annotated else self.renderer.draw(image,index,time_s,dict(row,duration_s=duration_s) if 'chamber' not in row else row,image_is_crop)
         frame=av.VideoFrame.from_ndarray(im,format='bgr24');frame.pts=round((time_s-self.start)*1e6)
         frame.time_base=Fraction(1,1000000);frame.duration=round(duration_s*1e6)
         for packet in self.stream.encode(frame):

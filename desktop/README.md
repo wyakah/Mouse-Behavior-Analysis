@@ -25,6 +25,6 @@ The first build includes model weights, avoiding an external hosting dependency.
 
 ## Release status
 
-This is a local development release. Distribution to other Macs requires a Developer ID signature and Apple notarization, plus review of third-party runtime/model redistribution terms. Tauri signing credentials are supplied by the release operator; never commit credentials. The public development installer is on [GitHub Releases](https://github.com/wyakah/three-chamber/releases/tag/v0.1.1). The build script itself does not publish releases or configure automatic updates. Windows and Intel Mac bundles are not yet supported.
+This is a local development release. Distribution to other Macs requires a Developer ID signature and Apple notarization, plus review of third-party runtime/model redistribution terms. Tauri signing credentials are supplied by the release operator; never commit credentials. The public development installer is on [GitHub Releases](https://github.com/wyakah/three-chamber/releases/tag/v0.1.2). The build script itself does not publish releases or configure automatic updates. Windows and Intel Mac bundles are not yet supported.
 
 Validate each release on a clean Mac, including native video upload, playback, downloads, an end-to-end analysis, process cleanup, and restart persistence. A successful build on the development Mac alone is not clean-machine certification.

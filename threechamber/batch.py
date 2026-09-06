@@ -116,6 +116,7 @@ def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyze
             batch['message']=f'{i+1}/{len(batch["entries"])} · {e["id"]}: {message}';persist()
         try:
             info=metadata(inside(root,e['video']))
+            e['config']['recording_metadata']={k:e.get(k,'') for k in ('id','sex','genotype')}
             context=dict(batch_id=batch['id'],recording_index=i,recording_id=e['id'],recording_count=len(batch['entries']),
                          source_duration_s=min(600,info['duration_seconds']),source_size=[info['width'],info['height']],cutoff=e['config'].get('pcutoff',.6),
                          crop=json.loads((root/'profiles/ethovision_three_chamber.json').read_text())['crop_xyxy'],

@@ -172,21 +172,16 @@ def load_tracks(path,nose='nose',center='center',scorer=None,individual=None):
         for c in ('x','y','likelihood'):out['tail_base_'+c]=pd.to_numeric(df['tail_base_'+c],errors='coerce').to_numpy()
     return out
 
-def score(tracks,t,dt,cfg):
-    H,cups,w,h,bounds=analysis_geometry(cfg)
+def classify_tracks(tracks, cfg, geometry=None):
+    """Shared frame classifications for live preview and final scoring; no gap filling."""
+    H,cups,w,h,bounds = geometry if geometry is not None else analysis_geometry(cfg)
     circle_zones=cfg.get('analysis_mode')=='circle_zones'
-    drawn_zones=cfg.get('analysis_mode') in ('drawn_zones','circle_zones')
-    if len(tracks)!=len(t): raise ValueError(f'Track/video mismatch: {len(tracks)} rows versus {len(t)} decoded frames.')
     cutoff=float(cfg.get('pcutoff',.6))
-    if not 0<=cutoff<=1: raise ValueError('Confidence cutoff must be 0–1.')
-    start=float(cfg.get('start_s',0)); end=cfg.get('end_s')
-    end=float(end) if end is not None else float(t[-1]+dt[-1])
-    if not np.isfinite([start,end]).all() or start<0 or end<=start or end>t[-1]+dt[-1]+.001: raise ValueError('Invalid scoring time window.')
-    weights=np.maximum(0,np.minimum(t+dt,end)-np.maximum(t,start))
-    out=tracks.copy(); out.insert(0,'frame',np.arange(len(t))); out['time_s']=t; out['duration_s']=weights
+    drawn_zones=cfg.get('analysis_mode') in ('drawn_zones','circle_zones')
+    out=tracks.copy()
     for part in ['nose','center']:
         xy=tracks[[f'{part}_x',f'{part}_y']].to_numpy()
-        valid=np.isfinite(xy).all(axis=1)&np.isfinite(tracks[f'{part}_likelihood'])&(tracks[f'{part}_likelihood']>=cutoff)
+        valid=np.isfinite(xy).all(axis=1)&np.isfinite(tracks[f'{part}_likelihood'])&(tracks[f'{part}_likelihood']>=cutoff)&(tracks[f'{part}_likelihood']<=1)
         cm=transform(np.nan_to_num(xy,nan=0,posinf=0,neginf=0),H)
         valid &= np.isfinite(cm).all(axis=1)
         out[f'{part}_x_cm']=cm[:,0]; out[f'{part}_y_cm']=cm[:,1]
@@ -208,7 +203,7 @@ def score(tracks,t,dt,cfg):
         else:
             out[f'{side}_cup_distance_cm']=np.where(out.nose_valid,d,np.nan)
             out[f'{side}_interaction']=nose_floor&(d>=-1e-6)&(d<=1+1e-6)
-    inside_cup=np.zeros(len(t),dtype=bool)
+    inside_cup=np.zeros(len(tracks),dtype=bool)
     for side in cups: inside_cup|=out[f'{side}_cup_distance_cm'].to_numpy() < -1e-6
     out['nose_scoreable']=nose_floor&~inside_cup
     overlap=out.left_interaction&out.right_interaction
@@ -216,12 +211,30 @@ def score(tracks,t,dt,cfg):
     out.loc[overlap,'nose_scoreable']=False
     out.loc[~out.nose_scoreable,['left_interaction','right_interaction']]=False
     cx,cy=out.center_x_cm.to_numpy(),out.center_y_cm.to_numpy()
-    labels=np.full(len(t),'unknown',dtype=object)
+    labels=np.full(len(tracks),'unknown',dtype=object)
     floor=out.center_valid.to_numpy()&(cx>=0)&(cx<=w)&(cy>=0)&(cy<=h)
     labels[out.center_valid.to_numpy()&~floor]='outside'
     # Shared divider belongs to chamber on its right; all chambers form a disjoint partition.
     labels[floor]=np.array(['left','center','right'])[np.searchsorted(bounds,cx[floor],side='right')]
     out['chamber']=labels
+    if not cups:out['nose_scoreable']=False
+    return out
+
+def score(tracks,t,dt,cfg):
+    H,cups,w,h,bounds=analysis_geometry(cfg)
+    circle_zones=cfg.get('analysis_mode')=='circle_zones'
+    drawn_zones=cfg.get('analysis_mode') in ('drawn_zones','circle_zones')
+    if len(tracks)!=len(t): raise ValueError(f'Track/video mismatch: {len(tracks)} rows versus {len(t)} decoded frames.')
+    cutoff=float(cfg.get('pcutoff',.6))
+    if not 0<=cutoff<=1: raise ValueError('Confidence cutoff must be 0–1.')
+    start=float(cfg.get('start_s',0)); end=cfg.get('end_s')
+    end=float(end) if end is not None else float(t[-1]+dt[-1])
+    if not np.isfinite([start,end]).all() or start<0 or end<=start or end>t[-1]+dt[-1]+.001: raise ValueError('Invalid scoring time window.')
+    weights=np.maximum(0,np.minimum(t+dt,end)-np.maximum(t,start))
+    out=tracks.copy(); out.insert(0,'frame',np.arange(len(t))); out['time_s']=t; out['duration_s']=weights
+    classified=classify_tracks(tracks,cfg,(H,cups,w,h,bounds))
+    for column in classified:out[column]=classified[column]
+    labels=out.chamber.to_numpy()
     total=float(weights.sum()); sec=lambda mask:float(weights[np.asarray(mask)].sum())
     summary={'version':VERSION,'window_start_s':start,'window_end_s':end,'analyzed_seconds':total,
              'decoded_frames':len(t),'scored_frames':int((weights>0).sum()),'pcutoff':cutoff,
@@ -325,6 +338,8 @@ def analyze(video,tracks_path,cfg,outdir,progress=lambda s:None):
         pd.DataFrame([summary]).to_csv(outdir/'summary.csv',index=False)
         (outdir/'summary.json').write_text(json.dumps(summary,indent=2,allow_nan=False))
         (outdir/'calibration.json').write_text(json.dumps(cfg,indent=2,allow_nan=False))
+        from threechamber.tracking_quality import nose_gap_diagnostics
+        (outdir/'tracking_quality.json').write_text(json.dumps(nose_gap_diagnostics(rows,cfg),indent=2,allow_nan=False))
         progress('Rendering annotated review video')
         review_video(video,rows,cfg,outdir/'review.mp4',lambda p:progress(f'Rendering review: {p:.0%}'),live=live)
         progress('Hashing source files')

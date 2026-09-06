@@ -5,6 +5,7 @@ from threechamber.live import landmark_states
 
 
 class AnnotationRenderer:
+    HEADER = 142
     COLORS = {'nose': (94,216,248), 'center': (182,228,133), 'tail_base': (255,164,201)}
 
     def __init__(self, cfg, source_size):
@@ -18,8 +19,11 @@ class AnnotationRenderer:
         if not 0<=x1<x2<=source_size[0] or not 0<=y1<y2<=source_size[1]:
             raise ValueError('Review crop outside source frame.')
         self.width = (x2-x1+1)//2*2
-        self.height = (y2-y1+106+1)//2*2
+        self.height = (y2-y1+self.HEADER+1)//2*2
         H,cups,w,h,bounds = analysis_geometry(cfg)
+        self.geometry=(H,cups,w,h,bounds)
+        from threechamber.social import stranger_side
+        self.side=stranger_side(cfg)
         inverse = np.linalg.inv(H)
         self.floor = np.rint(np.asarray(cfg['arena'])-[x1,y1]).astype(np.int32)
         self.dividers = [np.rint(transform([[x,0],[x,h]],inverse)-[x1,y1]).astype(np.int32) for x in bounds]
@@ -37,6 +41,16 @@ class AnnotationRenderer:
                 self.rings[side]=[np.rint(transform(c.reshape(-1,2)/scale,inverse)-[x1,y1]).astype(np.int32) for c in cs]
 
     def draw(self, image, index, time_s, row, image_is_crop=False):
+        if 'chamber' not in row and row.get('duration_s',0)>0:
+            import pandas as pd
+            from threechamber.core import classify_tracks
+            values={f'{part}_{axis}':row.get(f'{part}_{axis}',np.nan)
+                    for part in ('nose','center') for axis in ('x','y','likelihood')}
+            classified=classify_tracks(pd.DataFrame([values]),self.cfg,self.geometry).iloc[0].to_dict()
+            dt=float(row['duration_s'])
+            end=self.cfg.get('end_s')
+            duration=max(0,min(time_s+dt,float(end) if end is not None else time_s+dt)-max(time_s,float(self.cfg.get('start_s',0))))
+            row=dict(row,**classified,duration_s=duration)
         if index>self.last_index and 'chamber' in row:
             dt=max(0,float(row.get('duration_s',0)))
             if row['chamber'] in ('left','center','right'):self.totals[row['chamber']]+=dt
@@ -55,6 +69,14 @@ class AnnotationRenderer:
             if side in self.contours:
                 cv2.polylines(im,[self.contours[side]],True,color,2,cv2.LINE_AA)
                 if side in self.rings:cv2.polylines(im,self.rings[side],True,color,1,cv2.LINE_AA)
+                label=('Stranger' if side==self.side else 'Object') if self.side in ('left','right') else side.title()
+                contour=self.contours[side]
+                scale=min(.46,self.width/1100)
+                tw,th=cv2.getTextSize(label,0,scale,1)[0]
+                x=int(np.clip(np.mean(contour[:,0])-tw/2,3,max(3,im.shape[1]-tw-4)))
+                y=int(np.clip(contour[:,1].min()-10,th+7,im.shape[0]-5))
+                cv2.rectangle(im,(x-3,y-th-4),(x+tw+3,y+4),(26,38,32),-1)
+                cv2.putText(im,label,(x,y),0,scale,color,1,cv2.LINE_AA)
         points=landmark_states(row,self.cfg.get('pcutoff',.6),*self.source_size)
         for a,b in [('nose','center'),('center','tail_base')]:
             p,q=points[a],points[b]
@@ -69,25 +91,29 @@ class AnnotationRenderer:
             else:
                 for start in range(0,360,60):cv2.ellipse(im,center,(6,6),0,start,start+30,color,1,cv2.LINE_AA)
                 cv2.drawMarker(im,center,color,cv2.MARKER_TILTED_CROSS,4,1,cv2.LINE_AA)
-        im=cv2.copyMakeBorder(im,106,self.height-im.shape[0]-106,0,self.width-im.shape[1],cv2.BORDER_CONSTANT,value=(26,38,32))
-        small=.42 if self.width>=400 else .24
+        im=cv2.copyMakeBorder(im,self.HEADER,self.height-im.shape[0]-self.HEADER,0,self.width-im.shape[1],cv2.BORDER_CONSTANT,value=(26,38,32))
+        def text(value,x,y,scale=.43,color=(220,231,224),max_width=None):
+            value=str(value).encode('ascii','replace').decode()
+            limit=max_width or self.width-x-10
+            while cv2.getTextSize(value,0,scale,1)[0][0]>limit and len(value)>3:value=value[:-4]+'...'
+            cv2.putText(im,value,(x,y),0,scale,color,1,cv2.LINE_AA)
+        scale=min(1.,self.width/560)
+        meta=self.cfg.get('recording_metadata',{})
+        text('Mouse '+str(meta.get('id') or '--'),12,23,.55*scale,max_width=self.width*.55-12)
         ticks=int(time_s*100+1e-7)
-        cv2.putText(im,f'Frame {index+1:,}   |   {ticks//6000:02}:{ticks%6000/100:05.2f}',(12,22),cv2.FONT_HERSHEY_SIMPLEX,small,(235,243,236),1,cv2.LINE_AA)
-        for i,(name,label) in enumerate([('nose','Nose'),('center','Center'),('tail_base','Tail')]):
-            p=points[name];q='missing' if p['likelihood'] is None else f'{p["likelihood"]:.2f}'+(' ?' if p['state']=='uncertain' else '')
-            cv2.putText(im,f'{label} {q}',(12+i*(self.width//3),46),cv2.FONT_HERSHEY_SIMPLEX,small,self.COLORS[name],1,cv2.LINE_AA)
-        if 'chamber' in row:
-            status='Outside scoring window' if row.get('duration_s',1)<=0 else f'Chamber: {row["chamber"]} | '+(f'Left: {bool(row.get("left_interaction"))}  Right: {bool(row.get("right_interaction"))}' if row.get('nose_scoreable') else 'Nose unscored')
-            from threechamber.social import stranger_side
-            side=stranger_side(self.cfg);total=sum(self.totals[k] for k in ('left','center','right'))
-            if side in ('left','right'):
-                pct=f'{100*self.totals[side+"_nose"]/total:.1f}%' if total>0 and self.nose_observed>0 else '--'
-                status=f'Chamber: {row["chamber"]} | Stranger {side}: {pct} cumulative'
-        else:status='Tracking preview | measurements finalize after processing'
-        cv2.putText(im,status,(12,70),cv2.FONT_HERSHEY_SIMPLEX,small*.93,(205,219,208),1,cv2.LINE_AA)
-        if 'chamber' in row:
-            t=self.totals
-            text=f'Total s | Chambers L {t["left"]:.1f} C {t["center"]:.1f} R {t["right"]:.1f} | Nose L {t["left_nose"]:.1f} R {t["right_nose"]:.1f}'
-            scale=min(small*.9,(self.width-24)/max(1,cv2.getTextSize(text,0,1,1)[0][0]))
-            cv2.putText(im,text,(12,94),0,scale,(205,219,208),1,cv2.LINE_AA)
+        text(f'{ticks//6000:02}:{ticks%6000/100:05.2f}',int(self.width*.78),23,.48*scale)
+        text(f"Sex: {meta.get('sex') or '--'}   |   Genotype: {meta.get('genotype') or '--'}",12,44,.4*scale)
+        total=sum(self.totals[k] for k in ('left','center','right'))
+        self.si_percent=100*self.totals[self.side+'_nose']/total if self.side in ('left','right') and total>0 and self.nose_observed>0 else None
+        metrics=[('LEFT',f"{self.totals['left']:.1f} s"),('CENTER',f"{self.totals['center']:.1f} s"),('RIGHT',f"{self.totals['right']:.1f} s"),('SI %',f'{self.si_percent:.1f}%' if self.si_percent is not None else '--')]
+        for i,(label,value) in enumerate(metrics):
+            x=8+i*(self.width-16)//4;cw=(self.width-16)//4-5
+            cv2.rectangle(im,(x,54),(x+cw,108),(39,55,46),-1)
+            text(label,x+7,72,.33*scale,max_width=cw-12)
+            text(value if 'chamber' in row else '--',x+7,96,.58*scale,(182,228,133) if i==3 else (242,247,243),cw-12)
+        status='Nose tracked' if points['nose']['state']=='accepted' else 'Nose unavailable'
+        if row.get('nose_scoreable') and self.side in ('left','right'):
+            if row.get(self.side+'_interaction'):status='Interacting with stranger'
+            elif row.get(('right' if self.side=='left' else 'left')+'_interaction'):status='Interacting with object'
+        text('Cumulative  |  '+status,12,130,.38*scale)
         return im

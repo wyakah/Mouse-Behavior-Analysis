@@ -56,10 +56,10 @@ def test_renderer_uses_identical_coordinates_for_source_and_crop():
     row=dict(nose_x=55,nose_y=110,nose_likelihood=.99,center_x=70,center_y=120,center_likelihood=.2,tail_base_x=90,tail_base_y=130,tail_base_likelihood=float('nan'))
     full=renderer.draw(image,4,.2,row);crop=renderer.draw(image[10:190,10:290],4,.2,row,True)
     np.testing.assert_array_equal(full,crop)
-    np.testing.assert_array_equal(full[110-10+106,55-10],renderer.COLORS['nose'])
-    assert full.shape==(286,280,3)
+    np.testing.assert_array_equal(full[110-10+renderer.HEADER,55-10],renderer.COLORS['nose'])
+    assert full.shape==(180+renderer.HEADER,280,3)
     # Missing points are absent; a low-confidence center never gets a solid marker.
-    assert not np.array_equal(full[120-10+106,70-10+2],renderer.COLORS['center'])
+    assert not np.array_equal(full[120-10+renderer.HEADER,70-10+2],renderer.COLORS['center'])
 
 
 def test_stream_rejects_gaps_instead_of_silently_skipping_frames(tmp_path):
@@ -138,3 +138,36 @@ def test_encoder_backpressure_disables_preview_without_blocking_predictions(tmp_
     finally:release.set();publisher.close()
     assert publisher.failure and not publisher.worker.is_alive()
     assert json.loads((publisher.folder/'manifest.json').read_text())['status']=='failed'
+
+
+def test_live_raw_pose_totals_match_final_scoring_with_gaps_and_window():
+    from threechamber.core import score
+    from test_analysis import tracks
+    cfg=dict(circle_cfg(),stranger_side='right',start_s=.1,end_s=.85,
+             recording_metadata={'id':'M1','sex':'Female','genotype':'WT'})
+    poses=tracks([[50,100],[250,100],[250,100],[150,100]],p=[1,.1,1,1])
+    times=np.array([0,.2,.5,.8]);durations=np.array([.2,.3,.3,.2])
+    rows,summary=score(poses,times,durations,cfg)
+    live=AnnotationRenderer(cfg,[300,200]);final=AnnotationRenderer(cfg,[300,200])
+    image=np.zeros((200,300,3),np.uint8)
+    for i in range(len(poses)):
+        live.draw(image,i,times[i],dict(poses.iloc[i],duration_s=durations[i]))
+        final.draw(image,i,times[i],rows.iloc[i].to_dict())
+        assert live.totals==pytest.approx(final.totals)
+        assert live.si_percent==final.si_percent
+    assert live.si_percent==pytest.approx(summary['stranger_interaction_percent'])
+    assert live.totals['right_nose']==pytest.approx(.3)
+    assert live.totals['right']==pytest.approx(.6)
+
+
+def test_nose_gap_diagnostic_keeps_hidden_nose_unscored():
+    from threechamber.core import score
+    from threechamber.tracking_quality import nose_gap_diagnostics
+    from test_analysis import tracks
+    poses=tracks([[50,100]]*4,p=[1,.1,.1,1]);poses.loc[2,'center_likelihood']=.1
+    rows,_=score(poses,np.array([0,.1,.3,.6]),np.array([.1,.2,.3,.4]),circle_cfg())
+    q=nose_gap_diagnostics(rows,circle_cfg())
+    assert q['nose_missing_seconds']==pytest.approx(.5)
+    assert q['center_in_zone_nose_missing_seconds']==pytest.approx(.2)
+    assert q['longest_nose_gap_seconds']==pytest.approx(.5)
+    assert not rows.iloc[1:3].left_interaction.any()
