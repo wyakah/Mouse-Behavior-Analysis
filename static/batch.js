@@ -160,3 +160,4 @@ guard(async()=>{
  const list=await historyList();const active=list.find(b=>['running','queued'].includes(b.status));
  if(active){activeJob=active.id;job=active.id;liveView.updateBatch(active);if(!requested)step('results');await watch(active.id);}
 })();
+fetch('/reports/stereotypy-five-video/results.json',{method:'HEAD'}).then(r=>{if(r.ok)document.getElementById('stereotypy-batch-link').hidden=false;}).catch(()=>{});

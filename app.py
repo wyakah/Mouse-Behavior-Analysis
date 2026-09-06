@@ -46,7 +46,7 @@ def advanced(): return app.send_static_file('index.html')
 @app.get('/api/videos')
 def videos():
     found=[]
-    for p in sorted(list(ROOT.iterdir())+list((ROOT/'prepared').glob('*.mp4'))+list((ROOT/'videos').glob('*'))):
+    for p in sorted(list(ROOT.iterdir())+list((ROOT/'prepared').glob('*.mp4'))+list((ROOT/'videos').glob('*'))+list((ROOT/'stereotypy_videos').glob('*'))):
         if p.suffix.lower() in ('.mp4','.avi','.mov','.mkv','.m4v') and p.is_file():
             found.append(dict(name=str(p.relative_to(ROOT)),prepared=p.parent.name=='prepared',**metadata(p)))
     return jsonify(found)

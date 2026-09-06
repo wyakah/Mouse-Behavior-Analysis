@@ -18,12 +18,13 @@ from threechamber.recordings import validate_recordings
 from threechamber.batch import save_json
 from .core import BEHAVIORS, LABELS, ETHOGRAM_VERSION, number, validate_annotations, measure
 from .video import index_video
+from .window import analysis_end
 from .cage import validate_mapping, crop_frame
 from .pilot import run_pilot
 
 # Capture the implementation loaded by this process, even if files change later.
 IMPLEMENTATION_HASHES = {name: sha256(Path(__file__).with_name(name))
-                         for name in ("core.py", "video.py", "api.py", "cage.py", "pilot.py")}
+                         for name in ("core.py", "video.py", "api.py", "cage.py", "pilot.py", "window.py")}
 
 
 def utc_now():
@@ -175,15 +176,16 @@ def register_stereotypy(app, root_getter, pool, jobs):
             try:
                 jobs[jobid].update(status="running", message="Checking source timestamps and decoding the recording")
                 info = index_video(path)
-                # Never apply the three-chamber ten-minute truncation.
+                # Stereotypy uses the first twenty minutes of source time.
+                end = analysis_end(info["duration_s"])
                 record = dict(id=sid, video=str(path.relative_to(workspace)), **ids,
                               view="side", created_at=utc_now(), video_manifest=info,
                               metadata_history=[dict(changed_at=utc_now(), **ids)],
-                              start_s=0, end_s=info["duration_s"], merge_gap_s=0,
+                              start_s=0, end_s=end, merge_gap_s=0,
                               ethogram_version=ETHOGRAM_VERSION, ethogram_status="draft",
                               definitions=dict(BEHAVIORS),
                               revisions=[dict(revision=0, created_at=utc_now(), annotator_id=None,
-                                              annotations=[], start_s=0, end_s=info["duration_s"], merge_gap_s=0)])
+                                              annotations=[], start_s=0, end_s=end, merge_gap_s=0)])
                 with lock:
                     save(record)
                 jobs[jobid].update(status="complete", message="Manual scoring ready", session_id=sid)
@@ -213,8 +215,8 @@ def register_stereotypy(app, root_getter, pool, jobs):
                 raise ValueError("Enter an annotator ID before saving.")
             start, end = number(data.get("start_s")), number(data.get("end_s"))
             merge = number(data.get("merge_gap_s", 0))
-            if not 0 <= start < end <= record["video_manifest"]["duration_s"] or merge < 0:
-                raise ValueError("Choose a valid source analysis window and nonnegative merge gap.")
+            if start != 0 or abs(end - analysis_end(record["video_manifest"]["duration_s"])) > 1e-7 or merge < 0:
+                raise ValueError("Stereotypy uses the first 20 minutes (or the whole source if shorter). Choose a nonnegative merge gap.")
             annotations = validate_annotations(data.get("annotations"), start, end)
             revision = dict(revision=data["revision"] + 1, created_at=utc_now(),
                             annotator_id=annotator.strip(), annotations=annotations,

@@ -8,13 +8,14 @@ import av
 import cv2
 import numpy as np
 from .video import index_video
+from .window import clip_manifest
 from .cage import VERSION, validate_mapping, crop_frame, CageProposer, review_windows
-IMPLEMENTATION_HASHES={name:hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() for name in ['pilot.py','cage.py','video.py']}
+IMPLEMENTATION_HASHES={name:hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() for name in ['pilot.py','cage.py','video.py','window.py']}
 
 
 def run_pilot(path, mapping, out, manifest=None, progress=None):
     path,out=Path(path),Path(out)
-    manifest=manifest or index_video(path)
+    manifest=clip_manifest(manifest or index_video(path))
     if manifest['rotation_degrees'] != 0:
         raise ValueError('Normalize and verify rotated footage before cage analysis; originals are unchanged.')
     mapping=validate_mapping(mapping,manifest['width'],manifest['height'])
@@ -54,6 +55,7 @@ def run_pilot(path, mapping, out, manifest=None, progress=None):
             output.mux(packet)
         previous=None
         for index,frame in enumerate(container.decode(stream)):
+            if index >= len(manifest['frames']):break
             timing=manifest['frames'][index]
             if frame.pts!=timing['pts']:raise ValueError('Source timing changed during analysis.')
             crop=crop_frame(frame.to_ndarray(format='bgr24'),mapping)

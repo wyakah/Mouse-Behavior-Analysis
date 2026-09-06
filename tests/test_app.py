@@ -22,6 +22,14 @@ def test_video_inventory_and_frames(sample_workspace):
   r=c.get('/api/frame',query_string={'video':videos[0]['name'],'frame':1237})
   assert r.status_code==200 and r.mimetype=='image/jpeg'
 
+def test_stereotypy_folder_is_available_without_duplicate_upload(sample_workspace):
+ folder=sample_workspace/'stereotypy_videos';folder.mkdir()
+ tiny_video(folder/'mouse.mov')
+ with app.test_client() as c:
+  entries=c.get('/api/videos').json
+  match=[v for v in entries if v['name']=='stereotypy_videos/mouse.mov']
+  assert len(match)==1 and match[0]['prepared'] is False
+
 def test_origin_and_path_protection():
  with app.test_client() as c:
   assert c.post('/api/analyze',json={},headers={'Origin':'https://example.org'}).status_code==403

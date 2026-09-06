@@ -143,6 +143,8 @@ Fine-tuning is an explicit separate operation; saving labels does not update mod
 
 ### Side-view stereotypy development
 
+Stereotypy now uses **only the first 20 minutes** of each recording (the actual duration for shorter sources). The [five-mouse pilot](docs/stereotypy-five-video-pilot.md) runs frozen models end to end, exports clearly labeled candidate durations without statistics, and renders every included source frame for review. Candidate estimates are kept separate from accepted manual annotations.
+
 The shared test-selection screen opens a side-view reviewer at `/stereotypy` in the same Flask app. It supports independent grooming, digging, nonfood-gnawing, rearing, jumping, and circling intervals; explicit absent/unknown states; source-frame inspection; saved revisions; and CSV packages with observation coverage and provenance. Automatic measurements still require an accepted model. A separate [six-behavior training experiment](docs/stereotypy-training.md) fits temporal heads from external labels and demonstrations, with unlabeled adaptation to the supplied recordings. These models are experimental and are not used to populate scored measurements. The [expanded priority-behavior experiment](docs/stereotypy-priority-training.md) adds CBAS and LabGym data, frozen DINOv2 features, validation-only model selection, and explicit precision/recall acceptance checks for grooming, digging, and rearing.
 
 The real 745 and 729 recordings now have a [feasibility assessment, pretrained comparisons, and training plan](docs/stereotypy-feasibility-745-729.md). See also the [original research and integration plan](docs/stereotypy-research-and-plan.md). Definitions remain a draft for lab review.

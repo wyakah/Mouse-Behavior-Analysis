@@ -178,7 +178,7 @@ def test_revision_export_and_exact_frame_end_to_end(client):
         assert summary[1]["active_seconds"] == ""
         manifest = json.loads(archive.read("run_manifest.json"))
         assert manifest["predictions_available"] is False
-        assert set(manifest["implementation_sha256"]) == {"core.py", "video.py", "api.py", "cage.py", "pilot.py"}
+        assert set(manifest["implementation_sha256"]) == {"core.py", "video.py", "api.py", "cage.py", "pilot.py", "window.py"}
         assert manifest["package_versions"]["av"]
         assert len(manifest["session"]["revisions"]) == 2
     with zipfile.ZipFile(BytesIO(second_export.data)) as archive:
@@ -207,6 +207,22 @@ def test_window_cannot_silently_discard_annotations(client):
     response = c.post(url, json=dict(revision=0, annotator_id="WW", start_s=.1, end_s=.4, annotations=[row(0, .2)]))
     assert response.status_code == 400
     assert c.get(url).json["revision"] == 0
+
+
+def test_sessions_enforce_first_twenty_minutes(client, monkeypatch):
+    import stereotypy.api as api_module
+    original = api_module.index_video
+    def long_source(path):
+        return dict(original(path), duration_s=1250)
+    monkeypatch.setattr(api_module, 'index_video', long_source)
+    c, _ = client
+    url = create(c)
+    record = c.get(url).json
+    assert record['start_s'] == 0 and record['end_s'] == 1200
+    assert c.post(url, json=dict(revision=0, annotator_id='reviewer', start_s=0,
+                                 end_s=1250, annotations=[])).status_code == 400
+    assert c.post(url, json=dict(revision=0, annotator_id='reviewer', start_s=10,
+                                 end_s=1200, annotations=[])).status_code == 400
 
 
 def test_queue_limit_metadata_defaults_and_export(client):

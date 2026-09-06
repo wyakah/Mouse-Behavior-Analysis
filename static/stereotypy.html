@@ -4,8 +4,9 @@
 <header><a class="brand" href="/#tests"><span class="brand-icon">Ⅲ</span><span>Behavior Analysis<small>LOCAL RESEARCH WORKSPACE</small></span></a><span class="local-label">Stereotypy · side view</span></header>
 <nav class="batch-steps" aria-label="Analysis steps"><a href="/#tests">Test</a><button data-view="setup" class="active">Videos</button><button data-view="review" disabled>Review</button><button data-view="stereo-results" disabled>Results</button></nav>
 <p id="notice" role="status" aria-live="polite"></p>
+<p class="hint" id="stereotypy-batch-link" hidden><a href="/reports/stereotypy-five-video/index.html">Open the five-mouse, 20-minute analysis →</a></p>
 <p id="experimental-model-report" class="hint" hidden><a href="/reports/stereotypy-training/index.html">Review experimental six-behavior models →</a> · model suggestions are separate from saved measurements.</p>
-<section id="setup" class="recordings-page"><div class="title-row"><div><div class="step">STEREOTYPY</div><h1>Add your videos</h1><p>Upload recordings, then enter each mouse’s ID, sex, and genotype.</p></div></div>
+<section id="setup" class="recordings-page"><div class="title-row"><div><div class="step">STEREOTYPY</div><h1>Add your videos</h1><p>Upload recordings, then enter each mouse’s ID, sex, and genotype. Only the first 20 minutes are scored.</p></div></div>
 <div id="recording-setup" class="panel"></div><label id="stereo-view-check" class="check"><input id="side-view" type="checkbox"> Each video shows one mouse from the side.</label>
 <details class="panel"><summary>Previous reviews</summary><label class="saved-sessions">Recording<select id="sessions"><option value="">Choose a recording</option></select></label></details></section>
 <section id="review" hidden><div class="section-title"><h2>Review behaviors</h2><span id="session-title"></span></div><div class="toolbar"><label>Recording<select id="queue-recording"></select></label><button id="next-recording">Next recording →</button><button data-view="setup">Edit mouse details</button></div><p class="hint">Manual scoring · automatic measurements require a validated behavior model.</p>
@@ -19,7 +20,7 @@
 <div class="toolbar"><button id="back">← Source frame</button><button id="forward">Source frame →</button><button id="play">Play / pause</button><label>Speed<select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><output id="clock">0.000 s</output></div>
 <label>Source timeline<input id="seek" type="range" min="0" step="1" value="0"></label>
 <div id="timeline" aria-label="Saved and unsaved behavior intervals"></div><p class="hint">Green: present · blue: absent · amber: unobservable/ambiguous · gray: unreviewed. Click a segment to seek.</p>
-<details><summary>Analysis window & source timing</summary><div class="stereo-grid"><label>Window start (s)<input id="window-start" type="number" min="0" step="any"></label><label>Window end (s)<input id="window-end" type="number" min="0" step="any"></label></div>
+<details><summary>First 20 minutes & source timing</summary><div class="stereo-grid"><label>Window start (s)<input id="window-start" readonly type="number" min="0" step="any"></label><label>Window end (s)<input id="window-end" readonly type="number" min="0" step="any"></label></div>
 <p id="timing-info" class="hint"></p></details>
 </div><div class="panel"><h3>Mark an interval</h3>
 <label>Behavior<select id="behavior"></select></label><p id="definition"></p><p class="hint">Definitions are a draft for lab review. These actions alone do not establish pathological stereotypy.</p>

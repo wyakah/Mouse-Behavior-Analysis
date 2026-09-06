@@ -1,4 +1,5 @@
 'use strict';
+fetch('/reports/stereotypy-five-video/results.json',{method:'HEAD'}).then(r=>{if(r.ok)document.getElementById('stereotypy-batch-link').hidden=false;}).catch(()=>{});
 const $ = id => document.getElementById(id);
 let session = null, rows = [], undo = [], editing = null, dirty = false, exact = null, busy = false;
 const player = $('player');
@@ -56,7 +57,7 @@ async function load(id) {
   $('behavior').replaceChildren(...session.summary.map(r => option(r.behavior, r.behavior.replaceAll('_', ' '))));
   $('window-start').value = session.start_s; $('window-end').value = session.end_s; $('merge-gap').value = session.merge_gap_s;
   $('onset').value = session.start_s; $('offset').value = session.start_s;
-  $('seek').max = session.video_manifest.frames.length - 1;
+  $('seek').max = session.video_manifest.frames.findLastIndex(f => f.start_s < session.end_s);
   $('timing-info').textContent = `${session.video_manifest.frame_count} source frames · ${fmt(session.video_manifest.duration_s)} s · ${session.video_manifest.source_gaps.length} source gaps · ${session.video_manifest.variable_frame_rate ? 'variable' : 'constant'} frame timing. Frame buttons show the exact source image.`;
   resetEdit(); definition(); render(); savedSummary();
   if(typeof cageRefresh==='function')cageRefresh();
@@ -70,10 +71,10 @@ function frameIndex() {
   while (low < high) { const mid = (low + high) >> 1; if (frames[mid].start_s <= player.currentTime) low = mid + 1; else high = mid; }
   return Math.max(0, low - 1);
 }
-function time() { return exact === null ? Math.min(player.currentTime,session.video_manifest.duration_s) : session.video_manifest.frames[exact].start_s; }
-function clock() { if (!session) return; $('clock').textContent = `${fmt(time())} s · frame ${frameIndex()}`; $('seek').value = frameIndex(); }
+function time() { return exact === null ? Math.min(player.currentTime,session.end_s) : session.video_manifest.frames[exact].start_s; }
+function clock() { if (!session) return; if(player.currentTime >= session.end_s){player.pause(); if(player.currentTime > session.end_s)player.currentTime=session.end_s;} $('clock').textContent = `${fmt(time())} s · frame ${frameIndex()}`; $('seek').value = frameIndex(); }
 function showFrame(index) {
-  exact = Math.max(0, Math.min(session.video_manifest.frames.length - 1, index)); player.pause();
+  exact = Math.max(0, Math.min(Number($('seek').max), index)); player.pause();
   const f = session.video_manifest.frames[exact]; player.currentTime = f.start_s;
   $('exact-frame').src = `/api/stereotypy/sessions/${session.id}/frame/${exact}${$('cage-view')?.value==='review'?'?crop=cage':''}`; $('exact-frame').hidden = false; clock();
 }
@@ -86,7 +87,7 @@ action('back', () => showFrame(frameIndex() - 1)); action('forward', () => showF
 action('play', async () => { if (player.paused) { exact = null; $('exact-frame').hidden = true; await player.play(); } else player.pause(); });
 $('speed').addEventListener('change', () => { player.playbackRate = Number($('speed').value); });
 action('mark-start', () => { $('onset').value = time(); }); action('mark-end', () => { $('offset').value = time(); });
-action('include-frame', () => { $('offset').value = session.video_manifest.frames[frameIndex()].end_s; });
+action('include-frame', () => { $('offset').value = Math.min(session.end_s,session.video_manifest.frames[frameIndex()].end_s); });
 document.addEventListener('keydown', event => {
   if (!session || event.ctrlKey || event.metaKey || event.altKey || /INPUT|SELECT|TEXTAREA|BUTTON|VIDEO/.test(event.target.tagName)) return;
   if (event.key.toLowerCase() === 'i') { event.preventDefault(); $('onset').value = time(); }
