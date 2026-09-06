@@ -1,10 +1,24 @@
 {
   "bundle": {
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
     "windows": {
-      "nsis": {"installMode": "currentUser", "compression": "lzma"},
-      "webviewInstallMode": {"type": "downloadBootstrapper", "silent": true}
+      "nsis": {
+        "installMode": "currentUser",
+        "compression": "none"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    },
+    "resources": {
+      "../engine.zip": "engine.zip",
+      "../engine.json": "engine.json"
     }
   }
 }

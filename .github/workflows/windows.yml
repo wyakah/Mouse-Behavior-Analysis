@@ -40,13 +40,21 @@ jobs:
           $destination = "$env:RUNNER_TEMP\BehaviorStudioInstalled"
           Start-Process -FilePath $installer.FullName -ArgumentList '/S',"/D=$destination" -Wait
           if (!(Test-Path "$destination\behavior-studio.exe")) { throw 'Installer did not create the application' }
-          & "$destination\bundle\runtime\python.exe" -B desktop/windows_smoke.py --bundle "$destination\bundle"
+          $engine = "$env:RUNNER_TEMP\InstalledEngine"
+          python -m zipfile -e "$destination\engine.zip" "$engine"
+          & "$engine\runtime\python.exe" -B desktop/windows_smoke.py --bundle "$engine"
           if ($LASTEXITCODE -ne 0) { throw 'Installed runtime smoke test failed' }
           $app = Start-Process "$destination\behavior-studio.exe" -PassThru
-          Start-Sleep -Seconds 30
-          if ($app.HasExited) { throw 'Native app exited during startup' }
+          $deadline = (Get-Date).AddMinutes(5)
+          do {
+            Start-Sleep -Seconds 2
+            $app.Refresh()
+            if ($app.HasExited) { throw 'Native app exited during startup' }
+          } until ($app.MainWindowTitle -eq 'Behavior Studio' -or (Get-Date) -gt $deadline)
+          if ($app.MainWindowTitle -ne 'Behavior Studio') { $app.Kill(); throw 'Main analysis window did not open' }
           $app.CloseMainWindow() | Out-Null
           if (!$app.WaitForExit(15000)) { $app.Kill(); throw 'Native app did not close cleanly' }
+          if ($app.ExitCode -ne 0) { throw 'Native app returned an error' }
       - name: Stage verified download
         shell: pwsh
         run: |
@@ -64,5 +72,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          include-hidden-files: true
           name: Windows-validation
           path: .cache/windows-smoke*/**/*.json

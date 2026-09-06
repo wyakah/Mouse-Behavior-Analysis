@@ -18,10 +18,38 @@ fn stop(app: &tauri::AppHandle) {
         if let Ok(data)=app.path().app_data_dir() {let _=fs::remove_file(data.join("workspace/.desktop-active"));}
     }
 }
+#[cfg(windows)]
+fn windows_engine(resources: &std::path::Path, data: &std::path::Path) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+    use std::io::Read;
+    use sha2::{Digest, Sha256};
+    let meta:serde_json::Value=serde_json::from_slice(&fs::read(resources.join("engine.json"))?)?;
+    let hash=meta["sha256"].as_str().ok_or("Missing engine checksum")?;
+    if hash.len()!=64 || !hash.bytes().all(|b|b.is_ascii_hexdigit()) {return Err("Invalid engine checksum".into());}
+    let engine=data.join(format!("engine-{}",&hash[..16]));
+    if fs::read_to_string(engine.join(".complete")).ok().as_deref()!=Some(hash) {
+        let archive=resources.join("engine.zip");
+        let mut file=fs::File::open(&archive)?;let mut digest=Sha256::new();let mut buffer=[0u8;1048576];
+        loop {let n=file.read(&mut buffer)?;if n==0 {break;}digest.update(&buffer[..n]);}
+        if format!("{:x}",digest.finalize())!=hash {return Err("Engine archive is damaged. Download the installer again.".into());}
+        let stage=data.join(format!("engine-{}-staging-{}",&hash[..16],std::process::id()));
+        if stage.exists(){fs::remove_dir_all(&stage)?;}
+        fs::create_dir_all(&stage)?;
+        zip::ZipArchive::new(fs::File::open(&archive)?)?.extract(&stage)?;
+        fs::write(stage.join(".complete"),hash)?;
+        if let Err(error)=fs::rename(&stage,&engine) {
+            if fs::read_to_string(engine.join(".complete")).ok().as_deref()==Some(hash){fs::remove_dir_all(&stage)?;}else{return Err(error.into());}
+        }
+    }
+    Ok(engine)
+}
 fn launch(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let resources = app.path().resource_dir()?.join("bundle");
+    let resource_dir=app.path().resource_dir()?;
     let data = app.path().app_data_dir()?;
     fs::create_dir_all(&data)?;
+    #[cfg(windows)]
+    let resources=windows_engine(&resource_dir,&data)?;
+    #[cfg(not(windows))]
+    let resources=resource_dir.join("bundle");
     let workspace = data.join("workspace");
     let ready = data.join(format!("ready-{}.json",std::process::id()));
     let log = fs::OpenOptions::new().create(true).append(true).open(data.join("desktop.log"))?;

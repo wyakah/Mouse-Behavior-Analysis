@@ -10,7 +10,7 @@
     "windows": [
       {
         "label": "startup",
-        "title": "Behavior Studio",
+        "title": "Starting Behavior Studio",
         "width": 650,
         "height": 440,
         "resizable": false
@@ -26,9 +26,6 @@
       "app",
       "dmg"
     ],
-    "resources": {
-      "../bundle/": "bundle/"
-    },
     "category": "Education",
     "shortDescription": "Local mouse behavior analysis",
     "macOS": {

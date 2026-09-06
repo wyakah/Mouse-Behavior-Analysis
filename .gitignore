@@ -58,3 +58,6 @@ desktop/src-tauri/target/
 desktop/dist/
 
 desktop/src-tauri/gen/
+
+desktop/engine.zip
+desktop/engine.json

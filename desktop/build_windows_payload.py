@@ -50,4 +50,10 @@ def main():
     version=json.loads((ROOT/'desktop/package.json').read_text())['version']
     (BUNDLE/'manifest.json').write_text(json.dumps(dict(version=version,platform='windows-x64',python='3.12',program_files=owned,model_files=models),indent=2))
     subprocess.run([str(python),'-I','-B','-c','import flask,openpyxl,cv2,av,torch,transformers,statsmodels,tables; print("Windows runtime imports OK")'],check=True)
+    engine=ROOT/'desktop/engine.zip'
+    with zipfile.ZipFile(engine,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=1) as z:
+        for path in BUNDLE.rglob('*'):
+            if path.is_file() and '__pycache__' not in path.parts and path.suffix!='.pyc':z.write(path,path.relative_to(BUNDLE).as_posix())
+    (ROOT/'desktop/engine.json').write_text(json.dumps(dict(sha256=sha(engine),version=version)))
+    print('Compressed Windows engine:',engine.stat().st_size,flush=True)
 if __name__=='__main__':main()
