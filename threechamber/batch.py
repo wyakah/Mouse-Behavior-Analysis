@@ -93,14 +93,11 @@ def export_workbook(root,batch,folder):
     payload['statistics_report']=report
     save_json(folder/'statistics.json',report)
     save_json(folder/'workbook-data.json',payload)
-    deps=Path(os.environ.get('CODEX_WORKSPACE_DEPENDENCIES',str(Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies')))
-    runtime=root/'.cache/xlsx-runtime';runtime.mkdir(parents=True,exist_ok=True)
-    modules=runtime/'node_modules'
-    if not modules.exists():modules.symlink_to(deps/'node/node_modules',target_is_directory=True)
-    shutil.copyfile(root/'scripts/export_batch.mjs',runtime/'export_batch.mjs')
+    from threechamber.workbooks import export_three_chamber
     artifact_folder=root/'outputs'/batch['id'];artifact_folder.mkdir(parents=True,exist_ok=True)
-    with (folder/'excel-export.log').open('w') as log:
-        subprocess.run([str(deps/'node/bin/node'),str(runtime/'export_batch.mjs'),str(folder/'workbook-data.json'),str(artifact_folder/'results.xlsx')],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT)
+    version=root/'desktop-version.json'
+    if version.exists():payload['application_version']=json.loads(version.read_text())['version']
+    export_three_chamber(payload,artifact_folder/'results.xlsx')
 
 
 def process_batch(root,batch,tracker=get_tracks,exporter=export_workbook,analyzer=analyze):

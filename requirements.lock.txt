@@ -45,3 +45,5 @@ threadpoolctl==3.6.0
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 Werkzeug==3.1.8
+et_xmlfile==2.0.0
+openpyxl==3.1.5

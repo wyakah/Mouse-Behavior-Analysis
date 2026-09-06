@@ -35,11 +35,8 @@ def export_results(dest,state):
     state['downloads']=['summary.csv','candidates.csv']
     save(dest/'workbook.json',dict(headers=fields,rows=[[r.get(k) for k in fields] for r in rows]))
     try:
-        deps=Path.home()/'.cache/codex-runtimes/codex-primary-runtime/dependencies/node'
-        runtime=ROOT/'.cache/stereotypy-xlsx-runtime';runtime.mkdir(parents=True,exist_ok=True)
-        if not (runtime/'node_modules').exists():(runtime/'node_modules').symlink_to(deps/'node_modules',target_is_directory=True)
-        shutil.copyfile(ROOT/'scripts/export_stereotypy_queue.mjs',runtime/'export.mjs')
-        subprocess.run([str(deps/'bin/node'),str(runtime/'export.mjs'),str(dest/'workbook.json'),str(pub/'results.xlsx')],check=True,timeout=120)
+        from threechamber.workbooks import export_stereotypy
+        export_stereotypy(json.loads((dest/'workbook.json').read_text()),pub/'results.xlsx')
         state['downloads'].insert(0,'results.xlsx')
     except Exception as exc:state['export_notice']='Excel export failed; complete CSV results are available. '+str(exc)
 

@@ -1,8 +1,37 @@
-# Three Chamber
+# Behavior Studio
 
-A local tool for analyzing three-chamber mouse-behavior recordings from EthoVision. Track the free subject with DeepLabCut, measure nose time inside matching cup zones and occupancy in all three chambers, then export a combined Excel table and annotated review videos.
+A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. Upload recordings, enter mouse metadata, run analysis with a live annotated preview, and export Excel results and review videos.
 
 **Status: research prototype.** Tracking accuracy has not been validated to 95–99%. Confidence coverage and correct landmark placement are different measures. Review the annotated videos before interpreting results.
+
+## Download and install
+
+[**Download the Apple Silicon Mac installer (v0.1.0)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.0)
+
+| Platform | Availability |
+| --- | --- |
+| Apple Silicon Mac (M1 or later), macOS 14+ | Development installer available; about 1.2 GB download / 2.2 GB installed |
+| Intel Mac | Not built or tested |
+| Windows | Not built yet |
+| Linux | No desktop installer |
+
+1. Open the release above and download `Behavior-Studio-0.1.0-apple-silicon.dmg`.
+2. Open the disk image and drag **Behavior Studio** into **Applications**.
+3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
+4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. Three Chamber additionally requires checking its cup zones and chamber geometry.
+5. Run analysis and export the results. Three Chamber scores the first 10 minutes; Stereotypy scores the first 20 minutes, or the available duration if shorter.
+
+This development build has a local ad-hoc signature, **not an Apple Developer ID signature or notarization**. macOS may block opening it. Only proceed if you trust this repository and have verified the release checksum; Apple’s [instructions for opening an app from an unidentified developer](https://support.apple.com/en-us/102445) explain the per-app controls. Do not disable Gatekeeper globally.
+
+Recordings and results stay on your computer in `~/Library/Application Support/com.wyakah.behaviorstudio/workspace/`. Exported downloads go to Downloads. The app works offline after installation. Its bundled SuperAnimal models are limited to academic, non-commercial use under their [upstream notices](desktop/THIRD_PARTY_NOTICES.md).
+
+### Why is the installer large?
+
+This first version packages the entire tested analysis environment: about **1.8 GB for Python, native libraries, PyTorch, DeepLabCut and pose weights**, plus **362 MB for the remaining models**. The web interface and native window are a small part. Compression reduces the installed 2.2 GB application to approximately 1.2 GB. There are no laboratory recordings in the installer.
+
+A smaller future installer can download assay-specific models and omit unused runtime components. That reduces the initial download; models and inference libraries still need local disk space. Windows requires a separate Windows runtime, launcher/process-management changes, and Windows end-to-end validation—not a renamed Mac installer.
+
+See [desktop build instructions](desktop/README.md) and [validation results](desktop/VALIDATION.md).
 
 ## What it does
 
@@ -19,7 +48,7 @@ A local tool for analyzing three-chamber mouse-behavior recordings from EthoVisi
 
 The current camera profile targets **1024 × 768 EthoVision exports** with a fixed arena crop. It is not a general-purpose video tracker.
 
-## Quick start
+## Run from source
 
 The UI and scoring engine use Python 3.12. They are separate from the heavier DeepLabCut environment.
 
@@ -36,7 +65,7 @@ Open **http://127.0.0.1:8765**. On macOS, subsequent launches can use `Launch Th
 
 A fresh checkout opens with an empty recording queue. Add your videos through the app. Recordings, labels, trained weights, and generated results are intentionally not stored in Git.
 
-**Additional requirements for full analysis:** install DeepLabCut as described below. The current Excel exporter also requires the Codex Artifact Tool runtime described under [Excel export](#excel-export). You can open the UI and run the automated tests without either of those runtimes.
+**Additional requirements for full analysis:** install DeepLabCut and supply the model artifacts described below. Cloning the source alone does not install the trained stereotypy heads. Use the desktop release for a complete packaged installation.
 
 ### DeepLabCut setup
 
@@ -54,21 +83,7 @@ By default, inference runs with `.dlc-env/bin/python`. Set `DLC_PYTHON` to use a
 
 ### Excel export
 
-The current workbook builder, `scripts/export_batch.mjs`, uses `@oai/artifact-tool` from the **bundled Codex runtime**. This is not installed by `pip` and no public npm installation is assumed.
-
-The default dependency root is:
-
-```text
-~/.cache/codex-runtimes/codex-primary-runtime/dependencies
-```
-
-To use another installed copy:
-
-```bash
-export CODEX_WORKSPACE_DEPENDENCIES=/absolute/path/to/dependencies
-```
-
-That directory must contain `node/bin/node` and `node/node_modules/@oai/artifact-tool`. If the runtime is unavailable, analysis CSVs and review videos are retained and the batch reports an Excel-export failure. A standalone Excel backend is a portability improvement still to be implemented.
+The production Excel exporter uses `openpyxl`, included in `requirements.txt` and the desktop runtime. Neither Node nor Codex is required for analysis exports. Older research/reporting scripts using the Codex Artifact Tool remain in `scripts/`; they are not part of the automatic export path.
 
 ## Using the app
 
@@ -206,3 +221,7 @@ See [the robustness workflow](docs/stereotypy-robustness.md) for the separate fi
 
 Pose and behavior distinction experiments, automatic anatomical overlays, and the
 measured comparison are documented in [stereotypy distinction](docs/stereotypy-distinction.md).
+
+## Desktop application
+
+An offline Apple Silicon Mac desktop build is available in [desktop/README.md](desktop/README.md). It packages the interface, Python engine, and existing models; recordings and results stay in the user’s application workspace. The development build is not yet signed or notarized for public distribution.

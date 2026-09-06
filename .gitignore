@@ -51,3 +51,10 @@ tmp/
 node_modules/
 
 .labgym-env/
+
+# Desktop build artifacts
+desktop/bundle/
+desktop/src-tauri/target/
+desktop/dist/
+
+desktop/src-tauri/gen/
