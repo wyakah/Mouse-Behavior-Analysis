@@ -11,6 +11,7 @@ def payload(tmp):
     bundle=tmp/'bundle';(bundle/'payload/static').mkdir(parents=True)
     source=bundle/'payload/static/app.js';source.write_text('test')
     (bundle/'manifest.json').write_text(json.dumps(dict(version='0.1.0',program_files={'static/app.js':hashlib.sha256(b'test').hexdigest()},model_files={})))
+    for name in ('runtime','models/stereotypy-training','models/huggingface','models/torch'):(bundle/name).mkdir(parents=True,exist_ok=True)
     return bundle
 
 def test_install_preserves_user_files_and_updates_owned_files(tmp_path):
@@ -21,7 +22,7 @@ def test_install_preserves_user_files_and_updates_owned_files(tmp_path):
     install_workspace(bundle,workspace)
     assert (workspace/'videos/experiment.mov').read_bytes()==b'keep'
     assert (workspace/'configs/mouse.json').read_text()=='{}'
-    assert (workspace/'.dlc-env').is_symlink()
+    assert (workspace/'.dlc-env').is_symlink() or (workspace/'.dlc-env').is_junction()
     assert (workspace/'static/app.js').read_text()=='test'
 
 def test_install_refuses_tampered_program_and_traversal(tmp_path):

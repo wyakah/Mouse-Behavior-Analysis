@@ -1,18 +1,18 @@
-# Behavior Studio
+# Mouse Behavior Analysis
 
-A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. Upload recordings, enter mouse metadata, run analysis with a live annotated preview, and export Excel results and review videos.
+Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. Upload recordings, enter mouse metadata, run analysis with a live annotated preview, and export Excel results and review videos.
 
 **Status: research prototype.** Tracking accuracy has not been validated to 95–99%. Confidence coverage and correct landmark placement are different measures. Review the annotated videos before interpreting results.
 
 ## Download and install
 
-[**Download the Apple Silicon Mac installer (v0.1.3)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.3)
+[**Download the Apple Silicon Mac installer (v0.1.3)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.3)
 
 | Platform | Availability |
 | --- | --- |
 | Apple Silicon Mac (M1 or later), macOS 14+ | Development installer available; about 1.2 GB download / 2.2 GB installed |
 | Intel Mac | Not built or tested |
-| Windows | Not built yet |
+| Windows x64 | Installer build and validation in progress |
 | Linux | No desktop installer |
 
 1. Open the release above and download `Behavior-Studio-0.1.3-apple-silicon.dmg`.
@@ -29,7 +29,7 @@ Recordings and results stay on your computer in `~/Library/Application Support/c
 
 This first version packages the entire tested analysis environment: about **1.8 GB for Python, native libraries, PyTorch, DeepLabCut and pose weights**, plus **362 MB for the remaining models**. The web interface and native window are a small part. Compression reduces the installed 2.2 GB application to approximately 1.2 GB. There are no laboratory recordings in the installer.
 
-A smaller future installer can download assay-specific models and omit unused runtime components. That reduces the initial download; models and inference libraries still need local disk space. Windows requires a separate Windows runtime, launcher/process-management changes, and Windows end-to-end validation—not a renamed Mac installer.
+A smaller future installer can download assay-specific models and omit unused runtime components. That reduces the initial download; models and inference libraries still need local disk space. The Windows build bundles a separate x64 CPU runtime and uses native Windows process management.
 
 See [desktop build instructions](desktop/README.md) and [validation results](desktop/VALIDATION.md).
 
@@ -53,7 +53,7 @@ The current camera profile targets **1024 × 768 EthoVision exports** with a fix
 The UI and scoring engine use Python 3.12. They are separate from the heavier DeepLabCut environment.
 
 ```bash
-git clone https://github.com/wyakah/three-chamber.git
+git clone https://github.com/wyakah/Mouse-Behavior-Analysis.git
 cd three-chamber
 python3.12 -m venv .venv
 source .venv/bin/activate

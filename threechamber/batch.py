@@ -78,7 +78,7 @@ def get_tracks(root,working,dest,progress):
     if live and not live.disabled:env['THREECHAMBER_LIVE_DIR']=str(live.folder)
     with (dest/'inference.log').open('w') as log:
         progress('Locating the free subject')
-        subprocess.run([str(root/'.venv/bin/python'),str(root/'scripts/localize_video.py'),'--video',str(working),'--output',str(dest/'localization')],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT,env=env)
+        subprocess.run([str(interpreter),str(root/'scripts/localize_video.py'),'--video',str(working),'--output',str(dest/'localization')],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT,env=env)
         progress('DeepLabCut nose and body-center inference')
         if live:live.phase('tracking','Starting DeepLabCut and loading the pose model')
         subprocess.run([str(interpreter),str(root/'scripts/roi_inference.py'),'--video',str(working),'--proposals',str(dest/'localization/proposals.json'),'--output',str(dest)],check=True,cwd=root,stdout=log,stderr=subprocess.STDOUT,env=env)

@@ -6,7 +6,14 @@ struct Engine(Mutex<Option<Child>>);
 fn stop(app: &tauri::AppHandle) {
     if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
         // The engine and all analysis/FFmpeg workers share this process group.
+        #[cfg(unix)]
         unsafe { libc::kill(-(child.id() as i32), libc::SIGTERM); }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            let _=Command::new("taskkill.exe").args(["/PID",&child.id().to_string(),"/T","/F"]).creation_flags(0x08000000).status();
+            let _=child.kill();
+        }
         let _ = child.wait();
         if let Ok(data)=app.path().app_data_dir() {let _=fs::remove_file(data.join("workspace/.desktop-active"));}
     }
@@ -18,12 +25,17 @@ fn launch(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let workspace = data.join("workspace");
     let ready = data.join(format!("ready-{}.json",std::process::id()));
     let log = fs::OpenOptions::new().create(true).append(true).open(data.join("desktop.log"))?;
-    let mut command = Command::new(resources.join("runtime/bin/python3"));
+    let runtime=if cfg!(windows) {"runtime/python.exe"} else {"runtime/bin/python3"};
+    let mut command = Command::new(resources.join(runtime));
     command.arg("-I").arg("-B").arg(resources.join("payload/desktop/service.py"))
         .arg("--bundle").arg(&resources).arg("--workspace").arg(&workspace).arg("--ready").arg(&ready)
         .env("PYTHONUNBUFFERED", "1").env("PYTHONDONTWRITEBYTECODE", "1").stdout(Stdio::from(log.try_clone()?)).stderr(Stdio::from(log));
+    #[cfg(unix)]
     use std::os::unix::process::CommandExt;
+    #[cfg(unix)]
     unsafe { command.pre_exec(|| { if libc::setsid() < 0 {return Err(std::io::Error::last_os_error());} Ok(()) }); }
+    #[cfg(windows)]
+    {use std::os::windows::process::CommandExt; command.creation_flags(0x08000000);}
     let child = command.spawn()?;
     *app.state::<Engine>().0.lock().unwrap() = Some(child);
     let started = Instant::now();

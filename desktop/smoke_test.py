@@ -41,7 +41,9 @@ def run(args):
         assert entry['video_file']
     else:
         summary=entry['summary'];assert summary['stranger_side']=='right'
-        assert abs(summary['stranger_interaction_percent']-100*summary['right_nose_seconds']/summary['total_chamber_seconds'])<1e-9
+        if summary['nose_scoreable_fraction']>0 and summary['total_chamber_seconds']>0:
+            assert abs(summary['stranger_interaction_percent']-100*summary['right_nose_seconds']/summary['total_chamber_seconds'])<1e-9
+        else:assert summary['stranger_interaction_percent'] is None
         download=client.get('/batches/'+identifier+'/results.xlsx')
     assert download.status_code==200 and download.content[:2]==b'PK'
     (args.ready.parent/(args.assay+'-results.xlsx')).write_bytes(download.content)

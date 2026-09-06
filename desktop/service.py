@@ -1,6 +1,5 @@
 """Private loopback service for the desktop shell; no system Python required."""
 import argparse
-import fcntl
 import hashlib
 import json
 import os
@@ -43,8 +42,12 @@ def install_workspace(bundle, workspace):
                          '.cache/torch':bundle/'models/torch'}.items():
         target=workspace/name
         if target.is_symlink():target.unlink()
+        elif hasattr(target,'is_junction') and target.is_junction():target.rmdir()
         elif target.exists():raise ValueError(f'Expected a managed runtime link: {name}')
-        target.symlink_to(source,target_is_directory=True)
+        if os.name=='nt':
+            import _winapi
+            _winapi.CreateJunction(str(source.resolve()),str(target))
+        else:target.symlink_to(source,target_is_directory=True)
     (workspace/'desktop-version.json').write_text(json.dumps({k:manifest[k] for k in ('version','model_files')}))
     return manifest
 
@@ -62,7 +65,7 @@ def secure_app(app, token):
         if not secrets.compare_digest(request.cookies.get('behavior_session',''), token):abort(403)
     @app.get('/api/desktop')
     def desktop_info():
-        return jsonify(version='0.1.3',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
+        return jsonify(version='0.1.4',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
 
 def active_jobs(workspace):
     for pattern in ('batches/*/batch.json','outputs/stereo-*/batch.json'):
@@ -87,13 +90,28 @@ def mark_interrupted(workspace):
 
 def run(bundle, workspace, ready):
     workspace.mkdir(parents=True,exist_ok=True)
-    lock=(workspace/'.desktop.lock').open('w')
-    try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    except BlockingIOError:raise RuntimeError('Behavior Studio is already running. Open the existing window.')
+    lock=(workspace/'.desktop.lock').open('a+b')
+    try:
+        if os.name=='nt':
+            import msvcrt
+            lock.seek(0);lock.write(b'0');lock.flush();lock.seek(0)
+            msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+        else:
+            import fcntl
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except OSError:raise RuntimeError('Behavior Studio is already running. Open the existing window.')
     install_workspace(bundle,workspace)
     mark_interrupted(workspace)
     os.chdir(workspace)
-    os.environ.update(DLC_PYTHON=str(bundle/'runtime/bin/python3'),DLC_LIGHT='True',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',PYTHONDONTWRITEBYTECODE='1')
+    python=bundle/('runtime/python.exe' if os.name=='nt' else 'runtime/bin/python3')
+    if os.name=='nt':
+        import subprocess
+        class QuietProcess(subprocess.Popen):
+            def __init__(self,*args,**kwargs):
+                kwargs['creationflags']=kwargs.get('creationflags',0)|subprocess.CREATE_NO_WINDOW
+                super().__init__(*args,**kwargs)
+        subprocess.Popen=QuietProcess
+    os.environ.update(DLC_PYTHON=str(python),DLC_LIGHT='True',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',PYTHONDONTWRITEBYTECODE='1')
     sys.path.insert(0,str(workspace))
     import app as application
     application.app.config['DESKTOP_WORKSPACE']=str(workspace)

@@ -53,7 +53,9 @@ def run(dest,analyzer=None):
         key=f'{i+1:03}';e.update(status='running',message='Reading video',stage='preparing');state['current_index']=i;state['message']=f'Analyzing mouse {e["id"]} ({i+1}/{len(state["entries"])})';save(dest/'batch.json',state)
         try:
             source=(ROOT/e['video']).resolve();path=dest/'sources'/(key+'_source'+source.suffix)
-            if not path.exists():path.symlink_to(source)
+            if not path.exists():
+                if os.name=='nt':shutil.copy2(source,path)
+                else:path.symlink_to(source)
             analyzer.MAPPINGS[key]=automatic_mapping(source)
             mouse,out,index,mapping=analyzer.inputs(path)
             e.update(duration_s=index['duration_s'],message='Detecting behaviors and motion',stage='scoring');save(dest/'batch.json',state)

@@ -1,0 +1,66 @@
+name: Windows installer
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DLC_LIGHT: 'True'
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assemble Python and offline models
+        run: python desktop/build_windows_payload.py
+      - name: Verify analysis engine on Windows
+        run: |
+          desktop/bundle/runtime/python.exe -B -m pytest tests/test_analysis.py tests/test_social.py tests/test_streaming.py tests/test_desktop.py -q
+          desktop/bundle/runtime/python.exe -B desktop/windows_smoke.py --bundle desktop/bundle
+      - name: Build Windows installer
+        working-directory: desktop
+        run: |
+          npm ci
+          npm run build -- --config src-tauri/tauri.windows.conf.json --bundles nsis
+      - name: Install and test packaged application
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          $destination = "$env:RUNNER_TEMP\BehaviorStudioInstalled"
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S',"/D=$destination" -Wait
+          if (!(Test-Path "$destination\behavior-studio.exe")) { throw 'Installer did not create the application' }
+          & "$destination\bundle\runtime\python.exe" -B desktop/windows_smoke.py --bundle "$destination\bundle"
+          if ($LASTEXITCODE -ne 0) { throw 'Installed runtime smoke test failed' }
+          $app = Start-Process "$destination\behavior-studio.exe" -PassThru
+          Start-Sleep -Seconds 30
+          if ($app.HasExited) { throw 'Native app exited during startup' }
+          $app.CloseMainWindow() | Out-Null
+          if (!$app.WaitForExit(15000)) { $app.Kill(); throw 'Native app did not close cleanly' }
+      - name: Stage verified download
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force desktop/dist | Out-Null
+          $installer = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          Copy-Item $installer.FullName desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe
+          $hash = (Get-FileHash desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Behavior-Studio-0.1.4-windows-x64-setup.exe" | Set-Content desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-installer
+          path: desktop/dist/*
+      - name: Upload verified installer to draft release
+        run: gh release upload v0.1.4 desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe.sha256 --clobber
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-validation
+          path: .cache/windows-smoke*/**/*.json

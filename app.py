@@ -201,7 +201,7 @@ def specialized():
             if previous_config.exists() and not working_config.exists():working_config.write_bytes(previous_config.read_bytes())
             jobs[jobid].update(message='Locating the free subject, then estimating nose and center with DeepLabCut.')
             with (dest/'inference.log').open('w') as log:
-                subprocess.run([str(ROOT/'.venv/bin/python'),str(ROOT/'scripts/localize_video.py'),'--video',str(working),'--output',str(dest/'localization')],stdout=log,stderr=subprocess.STDOUT,check=True,cwd=ROOT)
+                subprocess.run([str(interpreter),str(ROOT/'scripts/localize_video.py'),'--video',str(working),'--output',str(dest/'localization')],stdout=log,stderr=subprocess.STDOUT,check=True,cwd=ROOT)
                 subprocess.run([str(interpreter),str(ROOT/'scripts/roi_inference.py'),'--video',str(working),'--proposals',str(dest/'localization/proposals.json'),'--output',str(dest)],stdout=log,stderr=subprocess.STDOUT,check=True,cwd=ROOT)
             jobs[jobid].update(status='complete',message='Experimental tracks ready. Review subject identity and cup contacts before scoring.',working_video=str(working.relative_to(ROOT)),tracks=str((dest/'selected_tracks.csv').relative_to(ROOT)))
         except Exception as e:jobs[jobid].update(status='failed',message=f'{e}. See {dest.relative_to(ROOT)}/inference.log')

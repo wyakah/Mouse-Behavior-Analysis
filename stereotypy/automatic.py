@@ -12,14 +12,25 @@ def save(path,data):
 
 
 def model_readiness(root):
-    required=['.dlc-env/bin/python','scripts/run_stereotypy_queue.py','outputs/stereotypy-training/v2/selection.json','outputs/stereotypy-training/v2/preprocessing.joblib','outputs/stereotypy-training/v2/temporal.pt','outputs/stereotypy-training/v2/binary-temporal.pt','outputs/stereotypy-training/v1/temporal-model.pt']
+    required=['scripts/run_stereotypy_queue.py','outputs/stereotypy-training/v2/selection.json','outputs/stereotypy-training/v2/preprocessing.joblib','outputs/stereotypy-training/v2/temporal.pt','outputs/stereotypy-training/v2/binary-temporal.pt','outputs/stereotypy-training/v1/temporal-model.pt']
     missing=[p for p in required if not (root/p).is_file()]
+    if not Path(os.environ.get('DLC_PYTHON',str(root/'.dlc-env/bin/python'))).is_file():missing.append('DeepLabCut Python runtime')
     return dict(ready=not missing,missing=missing,validated=False)
 
 def reconcile(path):
     state=json.loads(path.read_text())
     def alive(pid):
         if not pid:return False
+        if os.name=='nt':
+            import ctypes
+            kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+            kernel.OpenProcess.restype=ctypes.c_void_p
+            kernel.CloseHandle.argtypes=[ctypes.c_void_p]
+            handle=kernel.OpenProcess(0x1000,False,int(pid))
+            if not handle:return ctypes.get_last_error()==5
+            code=ctypes.c_ulong();kernel.GetExitCodeProcess.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_ulong)]
+            ok=kernel.GetExitCodeProcess(handle,ctypes.byref(code));kernel.CloseHandle(handle)
+            return bool(ok and code.value==259)
         try:os.kill(pid,0);return True
         except ProcessLookupError:return False
         except PermissionError:return True
@@ -45,7 +56,7 @@ def register_automatic(app,root_getter,pool):
         dest=folder(identifier)
         try:
             with (dest/'worker.log').open('a') as log:
-                process=subprocess.Popen([str(root()/'.dlc-env/bin/python'),str(root()/'scripts/run_stereotypy_queue.py'),str(dest)],cwd=root(),stdout=log,stderr=subprocess.STDOUT)
+                process=subprocess.Popen([os.environ.get('DLC_PYTHON',str(root()/'.dlc-env/bin/python')),str(root()/'scripts/run_stereotypy_queue.py'),str(dest)],cwd=root(),stdout=log,stderr=subprocess.STDOUT)
                 process.wait()
             state=load(identifier)
             if state['status'] in ('queued','running'):
