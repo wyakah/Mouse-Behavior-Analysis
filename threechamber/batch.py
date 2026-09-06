@@ -46,6 +46,10 @@ def validate_batch(root,draft):
         if [info['width'],info['height']]!=profile['source_size']:raise ValueError(f'{identifier}: this batch requires the saved EthoVision framing ({profile["source_size"][0]} × {profile["source_size"][1]}).')
         if e.get('reviewed') is not True:raise ValueError(f'{identifier}: review the cup centers, diameter, floor and dividers first.')
         cfg=e.get('config',{})
+        from threechamber.social import stranger_side
+        side=stranger_side({'stranger_side':e['stranger_side']}) if 'stranger_side' in e else stranger_side(cfg)
+        if side not in ('left','right'):raise ValueError(f'{identifier}: choose the stranger mouse position (left or right).')
+        e['stranger_side']=side;cfg.update(stranger_side=side,target_side=side)
         if cfg.get('analysis_mode')!='circle_zones' or cfg.get('cup_circles',{}).get('diameter_px')!=diameter:raise ValueError(f'{identifier}: cup diameter differs from the shared batch diameter. Review this recording again.')
         if cfg.get('pcutoff')!=cutoff:raise ValueError(f'{identifier}: likelihood cutoff differs from the batch setting.')
         analysis_geometry(cfg)

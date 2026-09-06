@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import av
 
-VERSION = '0.4.0'
+VERSION = '0.4.1'
 
 def sha256(path):
     h=hashlib.sha256()
@@ -233,7 +233,8 @@ def score(tracks,t,dt,cfg):
              'left_nose_seconds':sec(out.left_interaction),'right_nose_seconds':sec(out.right_interaction)}
     for key in ['left','center','right','unknown','outside']: summary[f'{key}_chamber_seconds']=sec(labels==key)
     denom=summary['left_nose_seconds']+summary['right_nose_seconds']
-    target=cfg.get('target_side','unspecified')
+    from threechamber.social import stranger_side, stranger_metrics
+    target=stranger_side(cfg)
     summary['target_side']=target
     summary['preference_index']=(summary[f'{target}_nose_seconds']-summary[f'{"right" if target=="left" else "left"}_nose_seconds'])/denom if target in ('left','right') and denom else None
     summary['analysis_mode']=cfg.get('analysis_mode','calibrated');summary['accuracy_validated']=False
@@ -264,6 +265,8 @@ def score(tracks,t,dt,cfg):
         for suffix in ['cm','fraction']:
             cols=[f'{part}_x_{suffix}',f'{part}_y_{suffix}']
             if cols[0] in out:out.loc[~out[f'{part}_valid'],cols]=np.nan
+    summary.update(stranger_metrics(summary))
+    out['stranger_interaction']=out[target+'_interaction'] if target in ('left','right') and cups else False
     return out,summary
 
 def bouts(rows):

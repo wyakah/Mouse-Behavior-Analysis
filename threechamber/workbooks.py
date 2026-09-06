@@ -40,13 +40,18 @@ def export_stereotypy(data,destination):
 def export_three_chamber(batch,destination):
     book=Workbook();book.remove(book.active);rows=[];setup=[];bouts=[]
     for e in batch['entries']:
-        summary=dict(e.get('summary',{}));target=summary.get('target_side')
+        from threechamber.social import stranger_metrics
+        summary=dict(e.get('summary',{}));summary.update(stranger_metrics(summary));target=summary.get('target_side')
         for name,side in [('target_nose_seconds',target),('other_nose_seconds','right' if target=='left' else 'left')]:
             summary[name]=summary.get(side+'_nose_seconds') if target in ('left','right') and summary.get('nose_scoreable_fraction',0)>0 else None
         rows.append(dict(sample_id=e['id'],sex=e.get('sex','unknown'),genotype=e.get('genotype',''),recording=e['video'],status=e['status'],**summary,error=e.get('error')))
         setup.append(dict(sample_id=e['id'],config=e.get('config'),provenance=e.get('manifest'),review_video=f"outputs/{e['run_id']}/review.mp4" if e.get('run_id') else None))
         bouts.extend(dict(sample_id=e['id'],**b) for b in e.get('bouts',[]))
-    records(book,'Results',rows);records(book,'Setup',setup);records(book,'Bouts',bouts)
+    ws=records(book,'Results',rows)
+    for cell in ws[1]:
+        if cell.value=='stranger_interaction_percent':cell.value='Stranger Interaction %'
+        elif cell.value=='stranger_side':cell.value='Stranger mouse position'
+    records(book,'Setup',setup);records(book,'Bouts',bouts)
     report=batch.get('statistics_report')
     if report:
         for name,key in [('Groups','groups'),('Comparisons','comparisons'),('ANOVA','anova'),('Exclusions','exclusions')]:
@@ -57,5 +62,6 @@ def export_three_chamber(batch,destination):
         ['Cup measurement','Nose within user-defined linked pixel circles'],
         ['Missing observations','Missing and low-confidence landmarks remain unscored; failed values are blank'],
         ['Timing','Source timestamps; cumulative durations'],
+        ['Stranger Interaction %','100 × stranger nose-in-zone seconds / (left + center + right chamber seconds). Unknown and outside chamber time are excluded. Missing inputs or zero denominator are blank.'],
         ['Application',batch.get('application_version','Source checkout')]])
     save(book,destination)

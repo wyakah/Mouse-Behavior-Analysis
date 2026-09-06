@@ -59,8 +59,9 @@ def test_portable_excel_exports_keep_values_and_prevent_formulas(tmp_path):
     assert ws['A2'].data_type=='s' and ws['A2'].value.startswith('=')
     assert ws['B2'].value==12.5 and ws['B3'].value is None and ws['A3'].value=='001'
     assert ws.freeze_panes=='A2'
-    batch=dict(entries=[dict(id='001',video='videos/a.mp4',status='complete',config={},summary={'target_side':'left','nose_scoreable_fraction':1,'left_nose_seconds':9,'right_nose_seconds':4},bouts=[])],statistics_report=dict(groups=[dict(n=2,mean=3)],settings={},versions={},notes=[],sources=[],test_count=0))
+    batch=dict(entries=[dict(id='001',video='videos/a.mp4',status='complete',config={},summary={'target_side':'left','nose_scoreable_fraction':1,'left_chamber_seconds':10,'center_chamber_seconds':10,'right_chamber_seconds':10,'left_nose_seconds':9,'right_nose_seconds':4},bouts=[])],statistics_report=dict(groups=[dict(n=2,mean=3)],settings={},versions={},notes=[],sources=[],test_count=0))
     export_three_chamber(batch,dest);book=load_workbook(dest)
     assert set(['Results','Setup','Bouts','Groups','Statistics notes'])<=set(book.sheetnames)
     row=dict(zip([c.value for c in book['Results'][1]],[c.value for c in book['Results'][2]]))
     assert row['target_nose_seconds']==9 and row['other_nose_seconds']==4
+    assert row['Stranger mouse position']=='left' and row['Stranger Interaction %']==30

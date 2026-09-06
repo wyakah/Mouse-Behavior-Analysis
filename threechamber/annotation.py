@@ -11,6 +11,7 @@ class AnnotationRenderer:
         from threechamber.core import analysis_geometry, circle_polygons, transform
         self.cfg, self.source_size = cfg, source_size
         self.totals=dict.fromkeys(['left','center','right','left_nose','right_nose'],0.)
+        self.nose_observed=0.
         self.last_index=-1
         self.crop = list(map(int, cfg.get('review_crop_xyxy', [0,0,*source_size])))
         x1,y1,x2,y2 = self.crop
@@ -39,6 +40,7 @@ class AnnotationRenderer:
         if index>self.last_index and 'chamber' in row:
             dt=max(0,float(row.get('duration_s',0)))
             if row['chamber'] in ('left','center','right'):self.totals[row['chamber']]+=dt
+            if row.get('nose_scoreable'):self.nose_observed+=dt
             for side in ('left','right'):
                 if row.get('nose_scoreable') and row.get(side+'_interaction'):self.totals[side+'_nose']+=dt
             self.last_index=index
@@ -76,6 +78,11 @@ class AnnotationRenderer:
             cv2.putText(im,f'{label} {q}',(12+i*(self.width//3),46),cv2.FONT_HERSHEY_SIMPLEX,small,self.COLORS[name],1,cv2.LINE_AA)
         if 'chamber' in row:
             status='Outside scoring window' if row.get('duration_s',1)<=0 else f'Chamber: {row["chamber"]} | '+(f'Left: {bool(row.get("left_interaction"))}  Right: {bool(row.get("right_interaction"))}' if row.get('nose_scoreable') else 'Nose unscored')
+            from threechamber.social import stranger_side
+            side=stranger_side(self.cfg);total=sum(self.totals[k] for k in ('left','center','right'))
+            if side in ('left','right'):
+                pct=f'{100*self.totals[side+"_nose"]/total:.1f}%' if total>0 and self.nose_observed>0 else '--'
+                status=f'Chamber: {row["chamber"]} | Stranger {side}: {pct} cumulative'
         else:status='Tracking preview | measurements finalize after processing'
         cv2.putText(im,status,(12,70),cv2.FONT_HERSHEY_SIMPLEX,small*.93,(205,219,208),1,cv2.LINE_AA)
         if 'chamber' in row:

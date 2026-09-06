@@ -19,7 +19,7 @@ def run(args):
         body={'entries':[{'video':video,'id':'desktop-smoke','sex':'unknown','genotype':''}]};endpoint='/api/stereotypy/batches'
     else:
         seeded=client.post('/api/batch/seed',json={'video':video}).json()
-        seeded['config'].update(pcutoff=.6,confirmed=True);seeded['reviewed']=True
+        seeded['config'].update(pcutoff=.6,confirmed=True,stranger_side='right',target_side='right');seeded['stranger_side']='right';seeded['reviewed']=True
         body=dict(entries=[seeded],diameter_px=seeded['config']['cup_circles']['diameter_px'],pcutoff=.6)
         endpoint='/api/batches'
     r=client.post(endpoint,json=body);r.raise_for_status();identifier=r.json()['id']
@@ -39,7 +39,10 @@ def run(args):
         assert sum(s['candidate_seconds'] or 0 for s in entry['summary'])<=args.seconds+.1
         download=client.get('/stereotypy-runs/'+identifier+'/results.xlsx')
         assert entry['video_file']
-    else:download=client.get('/batches/'+identifier+'/results.xlsx')
+    else:
+        summary=entry['summary'];assert summary['stranger_side']=='right'
+        assert abs(summary['stranger_interaction_percent']-100*summary['right_nose_seconds']/summary['total_chamber_seconds'])<1e-9
+        download=client.get('/batches/'+identifier+'/results.xlsx')
     assert download.status_code==200 and download.content[:2]==b'PK'
     (args.ready.parent/(args.assay+'-results.xlsx')).write_bytes(download.content)
     report=dict(assay=args.assay,status=state['status'],batch_id=identifier,live_segments_observed=live,elapsed_seconds=round(time.monotonic()-start,1),entry=entry)

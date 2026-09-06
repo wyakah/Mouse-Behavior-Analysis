@@ -65,7 +65,7 @@ def build(args):
     copy(ROOT/'desktop/THIRD_PARTY_NOTICES.md',bundle/'THIRD_PARTY_NOTICES.md')
     copy(ROOT/'desktop/notices',bundle/'notices')
     copy(ROOT/'desktop/runtime-lock.txt',bundle/'runtime-lock.txt')
-    manifest=dict(version='0.1.0',platform='macos-arm64',python='3.12',program_files=owned,model_files=hashes)
+    manifest=dict(version='0.1.1',platform='macos-arm64',python='3.12',program_files=owned,model_files=hashes)
     (bundle/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     subprocess.run([str(runtime/'bin/python3'),'-I','-c','import flask,openpyxl,cv2,av,torch,transformers,statsmodels,tables; print("Portable runtime imports OK")'],check=True)
     print('Payload ready:',bundle)

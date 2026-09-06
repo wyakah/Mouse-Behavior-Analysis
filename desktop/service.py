@@ -62,7 +62,7 @@ def secure_app(app, token):
         if not secrets.compare_digest(request.cookies.get('behavior_session',''), token):abort(403)
     @app.get('/api/desktop')
     def desktop_info():
-        return jsonify(version='0.1.0',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
+        return jsonify(version='0.1.1',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
 
 def active_jobs(workspace):
     for pattern in ('batches/*/batch.json','outputs/stereo-*/batch.json'):

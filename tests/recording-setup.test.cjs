@@ -20,3 +20,10 @@ test('Continue needs unique nonempty mouse IDs and no more than twenty rows',()=
 test('re-adding a selected workspace video is a no-op',async()=>{
  const h=harness(1);await h.view.add('0.mp4');assert.equal(h.entries.length,1);assert.equal(h.counts().saves,0);
 });
+test('Three Chamber requires stranger position; stereotypy does not',()=>{
+ const h=harness(1);assert.equal(h.view.valid(),true);
+ h.view.options.strangerPosition=true;assert.equal(h.view.valid(),false);
+ h.entries[0].config={target_side:'right'};assert.equal(h.view.valid(),true);
+ h.entries[0].stranger_side='';assert.equal(h.view.valid(),false);
+ h.entries[0].stranger_side='left';assert.equal(h.view.valid(),true);
+});

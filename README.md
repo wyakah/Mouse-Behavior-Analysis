@@ -6,7 +6,7 @@ A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. U
 
 ## Download and install
 
-[**Download the Apple Silicon Mac installer (v0.1.0)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.0)
+[**Download the Apple Silicon Mac installer (v0.1.1)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.1)
 
 | Platform | Availability |
 | --- | --- |
@@ -15,10 +15,10 @@ A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. U
 | Windows | Not built yet |
 | Linux | No desktop installer |
 
-1. Open the release above and download `Behavior-Studio-0.1.0-apple-silicon.dmg`.
+1. Open the release above and download `Behavior-Studio-0.1.1-apple-silicon.dmg`.
 2. Open the disk image and drag **Behavior Studio** into **Applications**.
 3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
-4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. Three Chamber additionally requires checking its cup zones and chamber geometry.
+4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. For Three Chamber, choose the stranger mouse’s left/right position for each recording. Three Chamber additionally requires checking its cup zones and chamber geometry.
 5. Run analysis and export the results. Three Chamber scores the first 10 minutes; Stereotypy scores the first 20 minutes, or the available duration if shorter.
 
 This development build has a local ad-hoc signature, **not an Apple Developer ID signature or notarization**. macOS may block opening it. Only proceed if you trust this repository and have verified the release checksum; Apple’s [instructions for opening an app from an unidentified developer](https://support.apple.com/en-us/102445) explain the per-app controls. Do not disable Gatekeeper globally.
@@ -102,6 +102,7 @@ Changing sample metadata or statistical settings preserves region confirmations.
 
 | Measurement | Definition |
 | --- | --- |
+| Stranger Interaction % | `100 × stranger nose-in-zone seconds / (left + center + right chamber seconds)`. Unknown/outside chamber time is excluded; missing data or a zero denominator is blank. |
 | Cup-zone time | Accepted subject nose inside the selected circle, including its boundary. Circles cannot overlap or extend beyond the reviewed floor. |
 | Chamber occupancy | Accepted body center in the left, center, or right partition. A divider boundary belongs to the chamber on its right. |
 | Unknown chamber time | Body center unavailable or below the likelihood cutoff. |

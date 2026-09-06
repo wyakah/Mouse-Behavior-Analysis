@@ -5,6 +5,8 @@ import warnings
 import numpy as np
 
 METRICS = {
+    'stranger_interaction_percent': 'Stranger Interaction %',
+    'stranger_interaction_seconds': 'Stranger interaction time (s)',
     'target_nose_seconds': 'Social / novel cup time (s)',
     'other_nose_seconds': 'Other cup time (s)',
     'preference_index': 'Preference index',
@@ -14,7 +16,7 @@ METRICS = {
     'left_nose_seconds': 'Left cup time (s)',
     'right_nose_seconds': 'Right cup time (s)',
 }
-DEFAULT_METRICS = ['target_nose_seconds', 'other_nose_seconds', 'preference_index']
+DEFAULT_METRICS = ['stranger_interaction_percent', 'target_nose_seconds', 'other_nose_seconds', 'preference_index']
 MODES = ['descriptive', 'genotype', 'within_sex', 'factorial', 'all']
 
 
@@ -50,6 +52,10 @@ def finite(value):
 def metric_value(entry, metric):
     s = entry.get('summary') or {}
     if entry.get('status') != 'complete': return None, 'Recording did not complete.'
+    if metric in ('stranger_interaction_percent','stranger_interaction_seconds'):
+        from threechamber.social import stranger_metrics
+        value=stranger_metrics(s)[metric]
+        return (value,None) if value is not None else (None,'Stranger position, nose observations, or chamber time unavailable.')
     if metric in ('target_nose_seconds', 'other_nose_seconds', 'preference_index'):
         target = s.get('target_side')
         if target not in ('left','right'): return None, 'Social / novel cup side is unspecified.'

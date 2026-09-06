@@ -36,7 +36,7 @@ def test_circle_geometry_rejects_outside_overlap_and_nonfinite():
 def batch_fixture(tmp_path):
  (tmp_path/'profiles').mkdir();(tmp_path/'outputs').mkdir()
  (tmp_path/'profiles/ethovision_three_chamber.json').write_text(json.dumps({'source_size':[64,64],'crop_xyxy':[0,0,64,64]}))
- cfg=dict(analysis_mode='circle_zones',confirmed=True,arena=[[0,0],[63,0],[63,63],[0,63]],cup_circles={'diameter_px':12,'left':[16,32],'right':[48,32]},dividers_fraction=[1/3,2/3],pcutoff=.6)
+ cfg=dict(target_side='left',analysis_mode='circle_zones',confirmed=True,arena=[[0,0],[63,0],[63,63],[0,63]],cup_circles={'diameter_px':12,'left':[16,32],'right':[48,32]},dividers_fraction=[1/3,2/3],pcutoff=.6)
  entries=[]
  for i in [1,2]:
   p=tmp_path/f'{i}.mp4';tiny_video(p)

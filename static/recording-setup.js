@@ -9,29 +9,31 @@ class RecordingSetup {
     this.render();
   }
   entries(){return this.options.entries();}
-  valid(){const ids=this.entries().map(e=>String(e.id||'').trim());return ids.length>0&&ids.length<=20&&ids.every(Boolean)&&new Set(ids).size===ids.length;}
+  stranger(e){return e.stranger_side??e.config?.stranger_side??e.config?.target_side??'';}
+  valid(){const ids=this.entries().map(e=>String(e.id||'').trim());return ids.length>0&&ids.length<=20&&ids.every(Boolean)&&new Set(ids).size===ids.length&&(!this.options.strangerPosition||this.entries().every(e=>['left','right'].includes(this.stranger(e))));}
   status(message,error=false){const p=this.host.querySelector('[data-status]');p.textContent=message;p.classList.toggle('error',error);}
   update(){
     const n=this.entries().length,disabled=this.busy||this.options.disabled?.();
     this.host.querySelector('[data-count]').textContent=`${n} / 20 videos`;
     this.input.disabled=disabled||n>=20;this.host.querySelector('[data-add]').disabled=disabled||n>=20||!this.available.some(v=>!this.entries().some(e=>e.video===v.name));
     this.host.querySelector('[data-continue]').disabled=disabled||!this.valid();
-    if(!this.busy)this.status(!n?'':!this.valid()?'Enter a unique mouse ID for each video.':'');
+    if(!this.busy)this.status(!n?'':!this.valid()?(this.options.strangerPosition?'Enter unique mouse IDs and choose each stranger position.':'Enter a unique mouse ID for each video.'):'');
   }
   setAvailable(videos){this.available=videos;this.renderPicker();this.update();}
   renderPicker(){const select=this.host.querySelector('.existing-picker select');select.replaceChildren(new Option('Choose a video',''));for(const v of this.available)if(!this.entries().some(e=>e.video===v.name))select.add(new Option(v.label||v.name.split('/').pop(),v.name));}
   render(){
     const box=this.host.querySelector('.recording-list');box.replaceChildren();
     if(this.entries().length){
-      const table=document.createElement('table');table.className='recording-table';const head=table.createTHead().insertRow();for(const label of ['Video','Mouse ID','Sex','Genotype','']){const th=document.createElement('th');th.textContent=label;th.scope='col';head.append(th);}
+      const table=document.createElement('table');table.className='recording-table';const head=table.createTHead().insertRow();for(const label of ['Video','Mouse ID','Sex','Genotype',...(this.options.strangerPosition?['Stranger position']:[]),'']){const th=document.createElement('th');th.textContent=label;th.scope='col';head.append(th);}
       const body=table.createTBody();this.entries().forEach((e,index)=>{
         const row=body.insertRow(),video=row.insertCell();video.textContent=e.video.split('/').pop();video.title=e.video;video.className='recording-name';
-        for(const [key,label] of [['id','Mouse ID'],['sex','Sex'],['genotype','Genotype']]){
-          const cell=row.insertCell(),input=document.createElement(key==='sex'?'select':'input');cell.dataset.label=label;
+        for(const [key,label] of [['id','Mouse ID'],['sex','Sex'],['genotype','Genotype'],...(this.options.strangerPosition?[['stranger_side','Stranger position']]:[])]){
+          const cell=row.insertCell(),input=document.createElement(['sex','stranger_side'].includes(key)?'select':'input');cell.dataset.label=label;
           if(key==='sex')for(const [value,text] of [['unknown','Not set'],['female','Female'],['male','Male']])input.add(new Option(text,value));
+          else if(key==='stranger_side')for(const [value,text] of [['','Choose side'],['left','Left'],['right','Right']])input.add(new Option(text,value));
           else{input.maxLength=key==='id'?100:120;input.placeholder=key==='id'?'Mouse ID':'Not recorded';}
-          input.value=e[key]||(key==='sex'?'unknown':'');input.setAttribute('aria-label',`${label} for video ${index+1}`);input.disabled=this.busy||this.options.disabled?.();
-          input.oninput=()=>{e[key]=input.value;this.update();Promise.resolve(this.options.change()).catch(error=>this.status(error.message,true));};cell.append(input);
+          input.value=key==='stranger_side'?this.stranger(e):e[key]||(key==='sex'?'unknown':'');input.setAttribute('aria-label',`${label} for video ${index+1}`);input.disabled=this.busy||this.options.disabled?.();
+          input.oninput=()=>{e[key]=input.value;if(key==='stranger_side'&&e.config){e.config.stranger_side=input.value;e.config.target_side=input.value;}this.update();Promise.resolve(this.options.change()).catch(error=>this.status(error.message,true));};cell.append(input);
         }
         const remove=document.createElement('button');remove.textContent='×';remove.setAttribute('aria-label',`Remove video ${index+1}`);remove.disabled=this.busy||this.options.disabled?.();remove.onclick=async()=>{this.entries().splice(index,1);this.render();try{await this.options.change();}catch(error){this.status(error.message,true);}};row.insertCell().append(remove);
       });box.append(table);
