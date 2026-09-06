@@ -49,3 +49,14 @@ Local smoke reports and workbooks are retained under `.cache/desktop-smoke/` and
 - The executable is unsigned. Tests establish build/install/functionality on the CI runner, not behavioral accuracy, clean-machine certification across all Windows versions, or GPU acceleration.
 
 Build and installed-app evidence: https://github.com/wyakah/Mouse-Behavior-Analysis/actions/runs/34045345552
+
+
+## Version 0.1.5 — separate chamber and zone interaction
+
+- Eight cumulative cards in a four-column, two-row layout: three chamber times and chamber interaction percentage, followed by left/right zone times, Center Zone N/A, and zone interaction percentage.
+- Both percentages divide by the summed observed chamber times. Chamber percentage uses stranger-side occupancy; zone percentage uses accepted nose-in-zone time. Missing nose observations do not suppress chamber occupancy. The legacy percentage field retains its zone-based meaning.
+- Development Python: 185 passed, 3 skipped. JavaScript: 10 passed. Mac bundled runtime: all 41 targeted analysis, social-metric, streaming, and desktop tests passed.
+- Regression checks cover irregular timestamps, clipped windows, missing noses, repeated preview rendering, live/final parity, Excel column order and mixed stranger-side roles. Saved mouse durations were independently checked against their per-frame classifications.
+- Mac application signature and DMG checksum verification passed. The bundle manifest includes and verifies the new shared UI metric helper, renderer, scoring calculations, and workbook exporter.
+- Existing local review videos, stream segments, summary CSV/JSON, and batch Excel workbooks were regenerated from saved scored frames. No model weights or nose classifications changed; this is not a new tracking-accuracy benchmark.
+- Windows CI passed engine tests, real-model synthetic smoke checks for both assays before and after installation, and native first-launch/clean-close checks. Verified installer publication is recorded in [the v0.1.5 build](https://github.com/wyakah/Mouse-Behavior-Analysis/actions/runs/34046841760).

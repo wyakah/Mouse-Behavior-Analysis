@@ -60,6 +60,14 @@ def test_excel_chamber_roles_remain_correct_for_mixed_stranger_sides(tmp_path):
     assert 'Chamber Stranger Interaction %' in headers
     assert 'Zone Stranger Interaction %' in headers
     assert 'Center Zone Time (s)' in headers
+    assert headers[5:13]==('Left Chamber (Stranger) Time (s)','Center Chamber Time (s)',
+        'Right Chamber (Object) Time (s)','Chamber Stranger Interaction %',
+        'Left Zone (Stranger) Time (s)','Center Zone Time (s)',
+        'Right Zone (Object) Time (s)','Zone Stranger Interaction %')
+    row=dict(zip(headers,list(load_workbook(file)['Results'].values)[1]))
+    assert row['Center Zone Time (s)'] is None
+    assert row['Chamber Stranger Interaction %']==pytest.approx(100*10/60)
+    assert row['Zone Stranger Interaction %']==pytest.approx(100*8/60)
 
 
 def test_distinct_chamber_and_zone_metrics_and_missing_nose():

@@ -6,9 +6,9 @@ Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-b
 
 ## Download and install
 
-[**Download the Windows x64 installer (v0.1.4)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.4)
+[**Download the Windows x64 installer (v0.1.5)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.5)
 
-[**Download the Apple Silicon Mac installer (v0.1.3)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.3)
+[**Download the Apple Silicon Mac installer (v0.1.5)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.5)
 
 | Platform | Availability |
 | --- | --- |
@@ -19,7 +19,7 @@ Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-b
 
 ### Mac
 
-1. Open the Mac release above and download `Behavior-Studio-0.1.3-apple-silicon.dmg`.
+1. Open the Mac release above and download `Behavior-Studio-0.1.5-apple-silicon.dmg`.
 2. Open the disk image and drag **Behavior Studio** into **Applications**.
 3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
 4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. For Three Chamber, choose the stranger mouse’s left/right position for each recording. Three Chamber additionally requires checking its cup zones and chamber geometry.
@@ -31,7 +31,7 @@ Recordings and results stay on your computer in `~/Library/Application Support/c
 
 ### Windows
 
-Download `Behavior-Studio-0.1.4-windows-x64-setup.exe` from the Windows release. Run the installer, then open **Behavior Studio** from the Start menu. It installs for your Windows user account and includes Python, the CPU inference libraries, both assay models, and the Microsoft C++ runtime.
+Download `Behavior-Studio-0.1.5-windows-x64-setup.exe` from the Windows release. Run the installer, then open **Behavior Studio** from the Start menu. It installs for your Windows user account and includes Python, the CPU inference libraries, both assay models, and the Microsoft C++ runtime.
 
 This is an **unsigned development installer** for Windows 10/11 x64. Windows may show an unknown-publisher or SmartScreen prompt. Verify the published SHA-256 checksum and only proceed if you trust this repository. The Microsoft WebView2 bootstrapper needs internet if WebView2 is not already installed; analysis and bundled models run locally afterward. No separate Python or DeepLabCut installation is needed. The first launch takes longer while the engine is unpacked; later launches reuse that local copy.
 
