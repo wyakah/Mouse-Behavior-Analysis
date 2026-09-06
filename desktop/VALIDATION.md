@@ -30,3 +30,10 @@ Local smoke reports and workbooks are retained under `.cache/desktop-smoke/` and
 - A real four-second Three Chamber HTTP upload completed in 52.3 seconds with tracking-stage video segments, metadata in the exported configuration, an annotated review, tracking-quality diagnostics, and an Excel download. Visually checked the tracking-stage MP4 overlay.
 - Overlay-only classification/rendering sustained approximately 244 frames/second on this development Mac; this is not end-to-end model throughput.
 - Automatic diagnostics retain missing-nose gaps and body-in-circle context without imputing nose interaction. Existing reviewed data are insufficient to validate anatomical accuracy; model weights were not changed.
+
+## Version 0.1.3 — chamber role labels
+
+- Restores four cumulative cards and spells out Stranger Interaction % in the fourth card.
+- Object/Stranger labels are centered at the top inside their rectified chambers. Chamber roles also appear in result tables and Excel; mixed-side batches retain correct per-mouse roles.
+- 194 packaged Python tests, 184 development Python tests (3 skipped), and 9 JavaScript tests passed. Excel regression checks cover uniform and mixed stranger-side batches.
+- Existing saved review videos and buffered previews can be regenerated from their scored frame tables with `scripts/refresh_three_chamber_reviews.py`; previous videos are retained in a local backup. This does not rerun inference or modify scores.

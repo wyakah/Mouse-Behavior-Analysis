@@ -42,3 +42,19 @@ def test_batch_requires_position_and_persists_metadata_into_scoring_config(tmp_p
     assert all(e['config']['stranger_side']==e['config']['target_side']=='right' for e in out['entries'])
     draft['entries'][0]['stranger_side']='middle'
     with pytest.raises(ValueError,match='left or right'):validate_batch(tmp_path,draft)
+
+
+def test_excel_chamber_roles_remain_correct_for_mixed_stranger_sides(tmp_path):
+    from openpyxl import load_workbook
+    from threechamber.workbooks import export_three_chamber
+    entries=[dict(id=side,video=side+'.mp4',status='complete',summary=dict(summary(),stranger_side=side)) for side in ('left','right')]
+    file=tmp_path/'roles.xlsx';export_three_chamber({'entries':entries},file)
+    rows=list(load_workbook(file)['Results'].values)
+    data=[dict(zip(rows[0],r)) for r in rows[1:]]
+    assert data[0]['Left chamber']=='Left (Stranger)'
+    assert data[1]['Left chamber']=='Left (Object)'
+    assert all(r['Left time (s)']==10 for r in data)
+    export_three_chamber({'entries':entries[:1]},file)
+    headers=next(load_workbook(file)['Results'].values)
+    assert 'Left (Stranger) time (s)' in headers and 'Right (Object) time (s)' in headers
+    assert 'Stranger Interaction %' in headers

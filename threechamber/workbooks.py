@@ -40,15 +40,24 @@ def export_stereotypy(data,destination):
 def export_three_chamber(batch,destination):
     book=Workbook();book.remove(book.active);rows=[];setup=[];bouts=[]
     for e in batch['entries']:
-        from threechamber.social import stranger_metrics
+        from threechamber.social import stranger_metrics, chamber_label
         summary=dict(e.get('summary',{}));summary.update(stranger_metrics(summary));target=summary.get('target_side')
         for name,side in [('target_nose_seconds',target),('other_nose_seconds','right' if target=='left' else 'left')]:
             summary[name]=summary.get(side+'_nose_seconds') if target in ('left','right') and summary.get('nose_scoreable_fraction',0)>0 else None
-        rows.append(dict(sample_id=e['id'],sex=e.get('sex','unknown'),genotype=e.get('genotype',''),recording=e['video'],status=e['status'],**summary,error=e.get('error')))
+        setup_side=summary.get('stranger_side')
+        if setup_side not in ('left','right'):setup_side=e.get('config',{}).get('stranger_side',e.get('config',{}).get('target_side','unspecified'))
+        labels={side+'_chamber_label':chamber_label(side,{'stranger_side':setup_side}) for side in ('left','center','right')}
+        rows.append(dict(sample_id=e['id'],sex=e.get('sex','unknown'),genotype=e.get('genotype',''),recording=e['video'],status=e['status'],**labels,**summary,error=e.get('error')))
         setup.append(dict(sample_id=e['id'],config=e.get('config'),provenance=e.get('manifest'),review_video=f"outputs/{e['run_id']}/review.mp4" if e.get('run_id') else None))
         bouts.extend(dict(sample_id=e['id'],**b) for b in e.get('bouts',[]))
     ws=records(book,'Results',rows)
     for cell in ws[1]:
+        key=cell.value
+        for side in ('left','center','right'):
+            if key==side+'_chamber_label':cell.value=side.title()+' chamber'
+            elif key==side+'_chamber_seconds':
+                labels={row[side+'_chamber_label'] for row in rows}
+                cell.value=(next(iter(labels)) if len(labels)==1 else side.title())+' time (s)'
         if cell.value=='stranger_interaction_percent':cell.value='Stranger Interaction %'
         elif cell.value=='stranger_side':cell.value='Stranger mouse position'
     records(book,'Setup',setup);records(book,'Bouts',bouts)

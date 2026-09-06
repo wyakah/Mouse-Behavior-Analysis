@@ -18,3 +18,9 @@ def stranger_metrics(summary):
     return dict(stranger_side=side,stranger_interaction_seconds=nose,
                 total_chamber_seconds=total,
                 stranger_interaction_percent=100*nose/total if nose is not None and total is not None and total>0 else None)
+
+
+def chamber_label(side, config):
+    target=stranger_side(config)
+    role=('Stranger' if side==target else 'Object') if side in ('left','right') and target in ('left','right') else None
+    return side.title()+(f' ({role})' if role else '')

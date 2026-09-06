@@ -6,7 +6,7 @@ A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. U
 
 ## Download and install
 
-[**Download the Apple Silicon Mac installer (v0.1.2)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.2)
+[**Download the Apple Silicon Mac installer (v0.1.3)**](https://github.com/wyakah/three-chamber/releases/tag/v0.1.3)
 
 | Platform | Availability |
 | --- | --- |
@@ -15,7 +15,7 @@ A local desktop tool for Three Chamber and Stereotypy mouse-behavior analysis. U
 | Windows | Not built yet |
 | Linux | No desktop installer |
 
-1. Open the release above and download `Behavior-Studio-0.1.2-apple-silicon.dmg`.
+1. Open the release above and download `Behavior-Studio-0.1.3-apple-silicon.dmg`.
 2. Open the disk image and drag **Behavior Studio** into **Applications**.
 3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
 4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. For Three Chamber, choose the stranger mouse’s left/right position for each recording. Three Chamber additionally requires checking its cup zones and chamber geometry.
@@ -94,7 +94,7 @@ The production Excel exporter uses `openpyxl`, included in `requirements.txt` an
 
 The live viewer plays continuous annotated video after a small starting buffer, once model preparation and localization finish. Each frame retains its source timestamp. **Watching** and **Video ready through** distinguish playback from processing: slow analysis may buffer, while fast analysis runs ahead. Pause, replay available footage, hide/show, or use Focus view; processing continues independently. **Watch active recording** switches to the current job without forcing you away from an earlier video.
 
-Nose, body-center, and tail-base markers share a renderer with the final review video. Solid markers are accepted, dashed markers are uncertain, and missing points are absent. Three Chamber previews show mouse ID, sex, genotype, cumulative Left/Center/Right seconds, and SI % using the same frame classifications as final scoring. Stranger/Object labels follow the selected side. SI % is stranger nose-in-zone time divided by the sum of all three chamber times. Missing noses remain unscored; `tracking_quality.json` records their gaps and body-in-cup-zone context for automatic diagnostics. Browser streaming requires Media Source Extensions with H.264 support. If preview encoding or playback fails, tracking and final exports remain available. See the [buffered video design and verification notes](docs/live-analysis-plan.md).
+Nose, body-center, and tail-base markers share a renderer with the final review video. Solid markers are accepted, dashed markers are uncertain, and missing points are absent. Three Chamber previews show mouse ID, sex, genotype, cumulative Left/Center/Right seconds, and Stranger Interaction % using the same frame classifications as final scoring. Four cumulative cards retain the compact layout. Stranger/Object labels sit inside the top center of their chambers; chamber labels in the video, results table, and Excel include each role. Mixed-side batches retain per-mouse role labels in Excel. Stranger Interaction % is stranger nose-in-zone time divided by the sum of all three chamber times. Missing noses remain unscored; `tracking_quality.json` records their gaps and body-in-cup-zone context for automatic diagnostics. Browser streaming requires Media Source Extensions with H.264 support. If preview encoding or playback fails, tracking and final exports remain available. See the [buffered video design and verification notes](docs/live-analysis-plan.md).
 
 Changing sample metadata or statistical settings preserves region confirmations. Changing the shared diameter or likelihood cutoff clears all region confirmations. Coordinates and reference-frame selection are under **Precise placement & reference image**; the cutoff is under **Advanced tracking settings**. Camera scale and framing must remain consistent across a batch. Matching image resolution alone does not establish matching physical scale.
 
