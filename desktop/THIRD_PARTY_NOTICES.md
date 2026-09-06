@@ -20,3 +20,7 @@ SuperAnimal-TopViewMouse and SuperAnimal-Quadruped are by Mackenzie Mathis, Shao
 - FFmpeg is supplied through imageio-ffmpeg: https://github.com/imageio/imageio-ffmpeg and https://ffmpeg.org/legal.html
 
 Python package license files and source metadata are retained within the bundled `runtime/lib/python3.12/site-packages/` distributions. `runtime-lock.txt` records versions. The source repository contains the application and packaging code; the release manifest records model hashes. Laboratory videos and generated experimental results are not distributed.
+
+## Windows Microsoft C++ runtime
+
+The Windows installer includes application-local Microsoft Visual C++ redistributable DLLs from the Visual Studio 2022 Redistributable Code directory. These Microsoft components are not covered by this project's license. See Microsoft's [redistribution documentation](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files?view=msvc-170) and [Visual Studio 2022 distributable-code list](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution).

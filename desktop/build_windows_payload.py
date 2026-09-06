@@ -12,6 +12,15 @@ def main():
     urllib.request.urlretrieve('https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip',archive)
     with zipfile.ZipFile(archive) as z:z.extractall(runtime)
     (runtime/'python312._pth').write_text('python312.zip\n.\nLib/site-packages\nimport site\n')
+    # Ship application-local C++ runtime DLLs; do not rely on Visual Studio being installed.
+    redists=[]
+    for variable in ('ProgramFiles','ProgramFiles(x86)'):
+        base=Path(os.environ.get(variable,'C:/Program Files'))/'Microsoft Visual Studio/2022'
+        redists.extend(base.glob('*/VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT'))
+    if not redists:raise RuntimeError('Microsoft redistributable CRT directory not found')
+    redist=max(redists,key=lambda p:tuple(int(v) for v in p.parent.parent.name.split('.')))
+    for dll in redist.glob('*.dll'):shutil.copy2(dll,runtime/dll.name)
+    if not (runtime/'msvcp140.dll').is_file():raise RuntimeError('C++ standard library was not bundled')
     site=runtime/'Lib/site-packages';site.mkdir(parents=True,exist_ok=True)
     subprocess.run([sys.executable,'-m','pip','install','--target',str(site),'pip'],check=True)
     python=runtime/'python.exe'
