@@ -40,14 +40,14 @@ def export_stereotypy(data,destination):
 def export_three_chamber(batch,destination):
     book=Workbook();book.remove(book.active);rows=[];setup=[];bouts=[]
     for e in batch['entries']:
-        from threechamber.social import stranger_metrics, chamber_label
-        summary=dict(e.get('summary',{}));summary.update(stranger_metrics(summary));target=summary.get('target_side')
+        from threechamber.social import stranger_metrics, chamber_label, METRIC_KEYS
+        summary=dict(e.get('summary',{}));summary.update(stranger_metrics(summary));target=summary.get('stranger_side')
         for name,side in [('target_nose_seconds',target),('other_nose_seconds','right' if target=='left' else 'left')]:
             summary[name]=summary.get(side+'_nose_seconds') if target in ('left','right') and summary.get('nose_scoreable_fraction',0)>0 else None
         setup_side=summary.get('stranger_side')
         if setup_side not in ('left','right'):setup_side=e.get('config',{}).get('stranger_side',e.get('config',{}).get('target_side','unspecified'))
         labels={side+'_chamber_label':chamber_label(side,{'stranger_side':setup_side}) for side in ('left','center','right')}
-        rows.append(dict(sample_id=e['id'],sex=e.get('sex','unknown'),genotype=e.get('genotype',''),recording=e['video'],status=e['status'],**labels,**summary,error=e.get('error')))
+        rows.append(dict(sample_id=e['id'],sex=e.get('sex','unknown'),genotype=e.get('genotype',''),recording=e['video'],status=e['status'],**{k:summary.get(k) for k in METRIC_KEYS},**labels,**{k:v for k,v in summary.items() if k not in METRIC_KEYS},error=e.get('error')))
         setup.append(dict(sample_id=e['id'],config=e.get('config'),provenance=e.get('manifest'),review_video=f"outputs/{e['run_id']}/review.mp4" if e.get('run_id') else None))
         bouts.extend(dict(sample_id=e['id'],**b) for b in e.get('bouts',[]))
     ws=records(book,'Results',rows)
@@ -55,10 +55,13 @@ def export_three_chamber(batch,destination):
         key=cell.value
         for side in ('left','center','right'):
             if key==side+'_chamber_label':cell.value=side.title()+' chamber'
-            elif key==side+'_chamber_seconds':
+            elif key in (side+'_chamber_seconds',side+'_zone_seconds'):
                 labels={row[side+'_chamber_label'] for row in rows}
-                cell.value=(next(iter(labels)) if len(labels)==1 else side.title())+' time (s)'
-        if cell.value=='stranger_interaction_percent':cell.value='Stranger Interaction %'
+                role=(next(iter(labels))[len(side):] if len(labels)==1 else '')
+                cell.value=side.title()+(' Chamber' if '_chamber_' in key else ' Zone')+role+' Time (s)'
+        if key=='chamber_stranger_interaction_percent':cell.value='Chamber Stranger Interaction %'
+        elif key=='zone_stranger_interaction_percent':cell.value='Zone Stranger Interaction %'
+        elif key=='stranger_interaction_percent':cell.value='Legacy zone interaction %'
         elif cell.value=='stranger_side':cell.value='Stranger mouse position'
     records(book,'Setup',setup);records(book,'Bouts',bouts)
     report=batch.get('statistics_report')
@@ -71,6 +74,8 @@ def export_three_chamber(batch,destination):
         ['Cup measurement','Nose within user-defined linked pixel circles'],
         ['Missing observations','Missing and low-confidence landmarks remain unscored; failed values are blank'],
         ['Timing','Source timestamps; cumulative durations'],
-        ['Stranger Interaction %','100 × stranger nose-in-zone seconds / (left + center + right chamber seconds). Unknown and outside chamber time are excluded. Missing inputs or zero denominator are blank.'],
+        ['Center Zone','Not applicable: the setup defines left and right cup zones only.'],
+        ['Chamber Stranger Interaction %','100 × stranger-side chamber seconds / (left + center + right chamber seconds).'],
+        ['Zone Stranger Interaction %','100 × stranger nose-in-zone seconds / (left + center + right chamber seconds). Unknown and outside chamber time are excluded. Missing inputs or zero denominator are blank.'],
         ['Application',batch.get('application_version','Source checkout')]])
     save(book,destination)

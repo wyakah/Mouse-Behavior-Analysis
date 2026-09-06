@@ -60,15 +60,15 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force desktop/dist | Out-Null
           $installer = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          Copy-Item $installer.FullName desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe
-          $hash = (Get-FileHash desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  Behavior-Studio-0.1.4-windows-x64-setup.exe" | Set-Content desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe.sha256
+          Copy-Item $installer.FullName desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe
+          $hash = (Get-FileHash desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Behavior-Studio-0.1.5-windows-x64-setup.exe" | Set-Content desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: Windows-installer
           path: desktop/dist/*
       - name: Upload verified installer to draft release
-        run: gh release upload v0.1.4 desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe desktop/dist/Behavior-Studio-0.1.4-windows-x64-setup.exe.sha256 --clobber
+        run: gh release upload v0.1.5 desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe.sha256 --clobber
       - uses: actions/upload-artifact@v4
         if: always()
         with:

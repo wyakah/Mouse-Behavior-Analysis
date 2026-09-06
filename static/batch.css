@@ -37,3 +37,5 @@
 .optional-statistics>summary{font-size:13px;cursor:pointer}.optional-statistics>summary .subtle-tag{margin-left:8px}.batch-body .optional-statistics .statistics-setup{border:0;box-shadow:none;margin:16px 0 0;padding:0}
 
 .sample-meta:empty{display:none}
+
+.social-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0}.social-metrics>div{padding:12px;background:#edf3e8;border-radius:6px;font-size:11px}.social-metrics b{display:block;font-size:23px;margin-top:6px}.social-metrics>div:nth-child(4n){background:#dcebe1}@media(max-width:580px){.social-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

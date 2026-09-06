@@ -53,8 +53,26 @@ def test_excel_chamber_roles_remain_correct_for_mixed_stranger_sides(tmp_path):
     data=[dict(zip(rows[0],r)) for r in rows[1:]]
     assert data[0]['Left chamber']=='Left (Stranger)'
     assert data[1]['Left chamber']=='Left (Object)'
-    assert all(r['Left time (s)']==10 for r in data)
+    assert all(r['Left Chamber Time (s)']==10 for r in data)
     export_three_chamber({'entries':entries[:1]},file)
     headers=next(load_workbook(file)['Results'].values)
-    assert 'Left (Stranger) time (s)' in headers and 'Right (Object) time (s)' in headers
-    assert 'Stranger Interaction %' in headers
+    assert 'Left Chamber (Stranger) Time (s)' in headers and 'Right Chamber (Object) Time (s)' in headers
+    assert 'Chamber Stranger Interaction %' in headers
+    assert 'Zone Stranger Interaction %' in headers
+    assert 'Center Zone Time (s)' in headers
+
+
+def test_distinct_chamber_and_zone_metrics_and_missing_nose():
+    s={**summary(), 'left_chamber_seconds':200.,'center_chamber_seconds':100.,'right_chamber_seconds':100.,'right_nose_seconds':20.}
+    r=stranger_metrics(s)
+    assert r['chamber_stranger_interaction_percent']==25
+    assert r['zone_stranger_interaction_percent']==5
+    assert r['right_zone_seconds']==20
+    assert r['center_zone_seconds'] is None
+    r=stranger_metrics({**s,'nose_scoreable_fraction':0})
+    assert r['chamber_stranger_interaction_percent']==25
+    assert r['zone_stranger_interaction_percent'] is None
+    assert r['left_zone_seconds'] is None
+    r=stranger_metrics({**s,'stranger_side':'left'})
+    assert r['chamber_stranger_interaction_percent']==50
+    assert r['zone_stranger_interaction_percent']==2

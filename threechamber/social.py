@@ -15,9 +15,20 @@ def stranger_metrics(summary):
     nose=summary.get(side+'_nose_seconds') if side in ('left','right') else None
     coverage=summary.get('nose_scoreable_fraction')
     if not valid(nose) or not valid(coverage) or coverage<=0:nose=None
+    chamber=summary.get(side+'_chamber_seconds') if side in ('left','right') else None
+    percent=lambda value:100*value/total if valid(value) and total is not None and total>0 else None
+    zones={k+'_zone_seconds':summary.get(k+'_nose_seconds') if valid(coverage) and coverage>0 and valid(summary.get(k+'_nose_seconds')) else None for k in ('left','right')}
     return dict(stranger_side=side,stranger_interaction_seconds=nose,
-                total_chamber_seconds=total,
-                stranger_interaction_percent=100*nose/total if nose is not None and total is not None and total>0 else None)
+                total_chamber_seconds=total,**zones,center_zone_seconds=None,
+                chamber_stranger_interaction_percent=percent(chamber),
+                zone_stranger_interaction_percent=percent(nose),
+                stranger_interaction_percent=percent(nose))  # Legacy zone-based alias.
+
+
+METRIC_KEYS = ('left_chamber_seconds','center_chamber_seconds','right_chamber_seconds',
+               'chamber_stranger_interaction_percent','left_zone_seconds','center_zone_seconds',
+               'right_zone_seconds','zone_stranger_interaction_percent')
+
 
 
 def chamber_label(side, config):

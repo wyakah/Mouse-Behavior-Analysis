@@ -65,4 +65,4 @@ def test_portable_excel_exports_keep_values_and_prevent_formulas(tmp_path):
     assert set(['Results','Setup','Bouts','Groups','Statistics notes'])<=set(book.sheetnames)
     row=dict(zip([c.value for c in book['Results'][1]],[c.value for c in book['Results'][2]]))
     assert row['target_nose_seconds']==9 and row['other_nose_seconds']==4
-    assert row['Stranger mouse position']=='left' and row['Stranger Interaction %']==30
+    assert row['Stranger mouse position']=='left' and row['Zone Stranger Interaction %']==30

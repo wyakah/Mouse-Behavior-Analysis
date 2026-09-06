@@ -155,7 +155,11 @@ def test_live_raw_pose_totals_match_final_scoring_with_gaps_and_window():
         final.draw(image,i,times[i],rows.iloc[i].to_dict())
         assert live.totals==pytest.approx(final.totals)
         assert live.si_percent==final.si_percent
+        assert live.metrics==final.metrics
     assert live.si_percent==pytest.approx(summary['stranger_interaction_percent'])
+    assert live.metrics['chamber_stranger_interaction_percent']==pytest.approx(summary['chamber_stranger_interaction_percent'])
+    assert live.metrics['zone_stranger_interaction_percent']==pytest.approx(summary['zone_stranger_interaction_percent'])
+    assert live.metrics['center_zone_seconds'] is None
     assert live.totals['right_nose']==pytest.approx(.3)
     assert live.totals['right']==pytest.approx(.6)
 

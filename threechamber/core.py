@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import av
 
-VERSION = '0.4.1'
+VERSION = '0.4.2'
 
 def sha256(path):
     h=hashlib.sha256()

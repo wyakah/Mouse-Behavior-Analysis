@@ -5,7 +5,7 @@ from threechamber.live import landmark_states
 
 
 class AnnotationRenderer:
-    HEADER = 126
+    HEADER = 222
     COLORS = {'nose': (94,216,248), 'center': (182,228,133), 'tail_base': (255,164,201)}
 
     def __init__(self, cfg, source_size):
@@ -96,17 +96,29 @@ class AnnotationRenderer:
         ticks=int(time_s*100+1e-7)
         text(f'{ticks//6000:02}:{ticks%6000/100:05.2f}',int(self.width*.78),23,.48*scale)
         text(f"Sex: {meta.get('sex') or '--'}   |   Genotype: {meta.get('genotype') or '--'}",12,44,.4*scale)
-        total=sum(self.totals[k] for k in ('left','center','right'))
-        self.si_percent=100*self.totals[self.side+'_nose']/total if self.side in ('left','right') and total>0 and self.nose_observed>0 else None
-        from threechamber.social import chamber_label
-        metrics=[(chamber_label(side,self.cfg),f'{self.totals[side]:.1f} s') for side in ('left','center','right')]
-        metrics.append(('Stranger Interaction %',f'{self.si_percent:.1f}%' if self.si_percent is not None else '--'))
-        for i,(label,value) in enumerate(metrics):
-            x=8+i*(self.width-16)//4;cw=(self.width-16)//4-5
-            cv2.rectangle(im,(x,54),(x+cw,118),(39,55,46),-1)
-            label_scale=min(.33*scale,(cw-14)/max(1,cv2.getTextSize(label,0,1,1)[0][0]))
-            text(label,x+7,75,label_scale,max_width=cw-12)
-            text(value if 'chamber' in row else '--',x+7,104,.58*scale,(182,228,133) if i==3 else (242,247,243),cw-12)
+        from threechamber.social import stranger_metrics, chamber_label, METRIC_KEYS
+        summary={k+'_chamber_seconds':self.totals[k] for k in ('left','center','right')}
+        summary.update({k+'_nose_seconds':self.totals[k+'_nose'] if k in self.contours else None for k in ('left','right')})
+        summary.update(stranger_side=self.side,nose_scoreable_fraction=float(self.nose_observed>0))
+        summary.update(stranger_metrics(summary))
+        self.metrics=summary
+        self.si_percent=summary['zone_stranger_interaction_percent']
+        for i,key in enumerate(METRIC_KEYS):
+            col=i%4; top=54+(i//4)*82
+            x=8+col*(self.width-16)//4;cw=(self.width-16)//4-5
+            cv2.rectangle(im,(x,top),(x+cw,top+76),(39,55,46),-1)
+            if col==3:
+                lines=['Chamber' if i<4 else 'Zone','Stranger Interaction %']
+            else:
+                side=('left','center','right')[col]
+                role=chamber_label(side,self.cfg)[len(side):].strip()
+                lines=[side.title()+(' Chamber' if i<4 else ' Zone'),(role+' Time (s)').strip()]
+            for line_no,label in enumerate(lines):
+                label_scale=min(.33*scale,(cw-14)/max(1,cv2.getTextSize(label,0,1,1)[0][0]))
+                text(label,x+7,top+17+line_no*14,label_scale,max_width=cw-12)
+            value=summary[key]
+            display=('N/A' if key=='center_zone_seconds' else '--') if value is None else f'{value:.1f}'+('%' if col==3 else ' s')
+            text(display if 'chamber' in row else '--',x+7,top+63,.58*scale,(182,228,133) if col==3 else (242,247,243),cw-12)
         # Rectified chamber centers keep role labels at the top inside each chamber.
         for i,(side,color) in enumerate([('left',(242,215,139)),('right',(128,189,255))]):
             if side not in self.contours:continue
