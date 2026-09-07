@@ -84,7 +84,11 @@ def videos():
     found=[]
     for p in sorted(list(ROOT.iterdir())+list((ROOT/'prepared').glob('*.mp4'))+list((ROOT/'videos').glob('*'))+list((ROOT/'stereotypy_videos').glob('*'))):
         if p.suffix.lower() in ('.mp4','.avi','.mov','.mkv','.m4v') and p.is_file():
-            found.append(dict(name=str(p.relative_to(ROOT)),prepared=p.parent.name=='prepared',**metadata(p)))
+            try:info=metadata(p)
+            except Exception:
+                app.logger.warning('Skipping unreadable video: %s',p.name)
+                continue
+            found.append(dict(name=str(p.relative_to(ROOT)),prepared=p.parent.name=='prepared',**info))
     return jsonify(found)
 
 @app.post('/api/videos/upload')

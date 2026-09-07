@@ -98,3 +98,32 @@ def test_cancel_releases_upload_lock_even_when_drive_cannot_be_cleaned(storage,m
     monkeypatch.setattr(Path,'unlink',disconnected)
     with pytest.raises(OSError):c.post('/api/videos/upload/cancel',json={'id':identifier})
     assert identifier not in c.application.extensions['active_uploads']
+
+def test_full_disk_returns_json_and_multipart_temp_uses_selected_drive(tmp_path,monkeypatch):
+    import app as application
+    import errno,io,tempfile
+    from werkzeug.datastructures import FileStorage
+    monkeypatch.setattr(application,'ROOT',tmp_path)
+    created=[];original=tempfile.TemporaryFile
+    def staged(*args,**kwargs):
+        created.append(Path(kwargs['dir']));return original(*args,**kwargs)
+    monkeypatch.setattr(tempfile,'TemporaryFile',staged)
+    def disk_full(*args,**kwargs):raise OSError(errno.ENOSPC,'No space left on device')
+    monkeypatch.setattr(FileStorage,'save',disk_full)
+    response=application.app.test_client().post('/api/videos/upload',data={'file':(io.BytesIO(b'video'),'mouse.mp4')})
+    assert response.status_code==507 and response.is_json
+    assert 'drive is full' in response.json['error']
+    assert created==[tmp_path/'.cache/upload-temp']
+
+def test_partial_old_upload_does_not_block_video_inventory(tmp_path,monkeypatch):
+    import app as application
+    monkeypatch.setattr(application,'ROOT',tmp_path)
+    videos=tmp_path/'videos';videos.mkdir();(videos/'good.mp4').write_bytes(b'complete');(videos/'partial.mp4').write_bytes(b'partial')
+    def inspect(path):
+        if path.name=='partial.mp4':raise ValueError('Missing movie header')
+        return {'width':100,'height':100,'duration_seconds':1}
+    monkeypatch.setattr(application,'metadata',inspect)
+    response=application.app.test_client().get('/api/videos')
+    assert response.status_code==200
+    assert [r['name'] for r in response.json]==['videos/good.mp4']
+    assert (videos/'partial.mp4').read_bytes()==b'partial'
