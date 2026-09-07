@@ -48,5 +48,6 @@ def register_uploads(app,root):
         return jsonify(name=str(dest.relative_to(root())),prepared=False,**details)
     @app.post('/api/videos/upload/cancel')
     def cancel():
-        identifier=request.get_json().get('id','');info,part=paths(identifier);info.unlink(missing_ok=True);part.unlink(missing_ok=True);active.pop(identifier,None)
+        identifier=request.get_json().get('id','');info,part=paths(identifier);active.pop(identifier,None)
+        info.unlink(missing_ok=True);part.unlink(missing_ok=True)
         return jsonify(cancelled=True)

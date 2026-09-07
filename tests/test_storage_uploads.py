@@ -87,3 +87,14 @@ def test_external_drive_without_symlink_support_copies_models(storage,tmp_path,m
     monkeypatch.setattr(Path,'symlink_to',unsupported)
     prepare_workspace(engine,target)
     assert (target/'outputs/stereotypy-training/v2/weights.pt').read_bytes()==b'weights'
+
+def test_cancel_releases_upload_lock_even_when_drive_cannot_be_cleaned(storage,monkeypatch):
+    c,_,engine=storage
+    identifier=c.post('/api/videos/upload/start',json={'name':'a.mp4','size':8}).json['id']
+    original=Path.unlink
+    def disconnected(self,*args,**kwargs):
+        if self.name==identifier+'.json':raise OSError('Drive disconnected')
+        return original(self,*args,**kwargs)
+    monkeypatch.setattr(Path,'unlink',disconnected)
+    with pytest.raises(OSError):c.post('/api/videos/upload/cancel',json={'id':identifier})
+    assert identifier not in c.application.extensions['active_uploads']
