@@ -6,9 +6,9 @@ Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-b
 
 ## Download and install
 
-[**Download the Windows x64 installer (v0.1.5)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.5)
+[**Download the Windows x64 installer (v0.1.6)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.6)
 
-[**Download the Apple Silicon Mac installer (v0.1.5)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.5)
+[**Download the Apple Silicon Mac installer (v0.1.6)**](https://github.com/wyakah/Mouse-Behavior-Analysis/releases/tag/v0.1.6)
 
 | Platform | Availability |
 | --- | --- |
@@ -19,7 +19,7 @@ Behavior Studio is a local desktop tool for Three Chamber and Stereotypy mouse-b
 
 ### Mac
 
-1. Open the Mac release above and download `Behavior-Studio-0.1.5-apple-silicon.dmg`.
+1. Open the Mac release above and download `Behavior-Studio-0.1.6-apple-silicon.dmg`.
 2. Open the disk image and drag **Behavior Studio** into **Applications**.
 3. Open **Behavior Studio**. Python and the models are included; no terminal or separate installation is required.
 4. Choose **Three Chamber** or **Stereotypy**, upload videos, and enter mouse ID, sex, and genotype. For Three Chamber, choose the stranger mouse’s left/right position for each recording. Three Chamber additionally requires checking its cup zones and chamber geometry.
@@ -31,7 +31,7 @@ Recordings and results stay on your computer in `~/Library/Application Support/c
 
 ### Windows
 
-Download `Behavior-Studio-0.1.5-windows-x64-setup.exe` from the Windows release. Run the installer, then open **Behavior Studio** from the Start menu. It installs for your Windows user account and includes Python, the CPU inference libraries, both assay models, and the Microsoft C++ runtime.
+Download `Behavior-Studio-0.1.6-windows-x64-setup.exe` from the Windows release. Run the installer, then open **Behavior Studio** from the Start menu. It installs for your Windows user account and includes Python, the CPU inference libraries, both assay models, and the Microsoft C++ runtime.
 
 This is an **unsigned development installer** for Windows 10/11 x64. Windows may show an unknown-publisher or SmartScreen prompt. Verify the published SHA-256 checksum and only proceed if you trust this repository. The Microsoft WebView2 bootstrapper needs internet if WebView2 is not already installed; analysis and bundled models run locally afterward. No separate Python or DeepLabCut installation is needed. The first launch takes longer while the engine is unpacked; later launches reuse that local copy.
 
@@ -245,3 +245,5 @@ An offline Apple Silicon Mac desktop build is available in [desktop/README.md](d
 Use **Change location** on either Videos screen to choose a folder on your computer or an external drive. The app creates a **Mouse Behavior Analysis** workspace there for uploaded videos, temporary uploads, prepared clips, tracking, preview videos, and results. Each location keeps its own batches and settings; switching does not move or delete previous data. Reconnect an unavailable drive or choose another location. Storage changes are blocked during uploads and analyses.
 
 Video uploads use 16 MB binary chunks, and the previous 4 GB per-file restriction is removed. Batches support 150 recordings; files are uploaded and analyzed sequentially.
+
+Older incomplete uploads are skipped in the video list so they cannot block setup. Re-upload their original recordings. Quit the previous app before installing an update.

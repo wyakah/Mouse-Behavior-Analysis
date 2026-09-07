@@ -60,3 +60,15 @@ Build and installed-app evidence: https://github.com/wyakah/Mouse-Behavior-Analy
 - Mac application signature and DMG checksum verification passed. The bundle manifest includes and verifies the new shared UI metric helper, renderer, scoring calculations, and workbook exporter.
 - Existing local review videos, stream segments, summary CSV/JSON, and batch Excel workbooks were regenerated from saved scored frames. No model weights or nose classifications changed; this is not a new tracking-accuracy benchmark.
 - Windows CI passed engine tests, real-model synthetic smoke checks for both assays before and after installation, and native first-launch/clean-close checks. Verified installer publication is recorded in [the v0.1.5 build](https://github.com/wyakah/Mouse-Behavior-Analysis/actions/runs/34046841760).
+
+
+## Version 0.1.6 — selectable storage and large uploads
+
+- Confirmed the reported upload failures in native-app logs: `ENOSPC` while staging multipart data in the system temporary folder and while saving uploaded videos. Five truncated copies were also blocking video inventory; the new inventory skips unreadable files and preserves them.
+- Both assays support 150-recording setups. Shared UI tests cover 150/151 boundaries and eight sequential uploads in bounded binary chunks. No whole-video string conversion is used; each chunk is at most 16 MB. The former 4 GB request cap is removed.
+- Storage selection persists between launches. Recording, staging, preparation, tracking, preview, and result paths use the selected workspace. Prior workspaces are preserved, running work blocks location changes, and stale tabs cannot write into a new workspace.
+- 195 development Python tests passed (3 skipped); 11 JavaScript tests passed. The bundled Mac runtime passed all 54 targeted engine, storage, upload, and desktop tests. Tests include JSON disk-full errors, selected-drive multipart staging, chunk rollback, cancellation after disconnection, and unreadable legacy uploads.
+- Real-model HTTP checks used a separate selected folder: a four-second Three Chamber clip completed in 56.5 seconds and a six-second stereotypy clip in 26.1 seconds. Both produced live segments, annotated output, and Excel in the selected workspace; its original workspace received no videos. Restart restored the selected location and model readiness.
+- These selected-folder checks ran on the local filesystem. Model-copy fallback for filesystems without symbolic links is separately covered by a regression test; physical removable-drive hardware was not part of this run.
+- Mac app signature and DMG verification passed; packaged program hashes match the final source. Existing scoring models and measurement definitions are unchanged.
+- Windows CI passed the targeted tests, pre/post-install real-model smoke checks for both assays, and native first-launch/clean-close checks. [Final Windows build and installer validation](https://github.com/wyakah/Mouse-Behavior-Analysis/actions/runs/34081842283).
