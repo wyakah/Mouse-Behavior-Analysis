@@ -1,12 +1,12 @@
 """Shared recording setup contract for behavioral tests."""
 from threechamber.statistics import sample_metadata
 
-MAX_VIDEOS = 20
+MAX_VIDEOS = 150
 
 
 def validate_recordings(entries, require_ids=False):
     if not isinstance(entries, list) or len(entries) > MAX_VIDEOS:
-        raise ValueError('Set up at most 20 videos at a time.')
+        raise ValueError('Set up at most 150 videos at a time.')
     ids=set();videos=set()
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get('video'), str) or not entry['video']:

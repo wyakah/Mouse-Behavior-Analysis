@@ -47,7 +47,7 @@ See [desktop build instructions](desktop/README.md) and [validation results](des
 
 ## What it does
 
-- **One workflow for one video or a batch:** Choose test → Videos → Test setup/review → Results. Both tests share the same upload and mouse metadata screen, with up to 20 videos per setup.
+- **One workflow for one video or a batch:** Choose test → Videos → Test setup/review → Results. Both tests share the same upload and mouse metadata screen, with up to 150 videos per setup.
 - **Mouse metadata and statistics:** mouse ID, sex, and genotype; descriptive summaries, genotype comparisons, within-sex comparisons, and genotype × sex ANOVA in Excel. One independent mouse per sample ID.
 - **Test selection:** choose Three Chamber for tracking and group statistics, or Stereotypy for automatic side-view behavior estimates. Stereotypy models remain experimental; automation does not establish accuracy.
 - **Matching cup circles:** one shared diameter across both cups and all recordings, with independently movable centers.
@@ -239,3 +239,9 @@ measured comparison are documented in [stereotypy distinction](docs/stereotypy-d
 ## Desktop application
 
 An offline Apple Silicon Mac desktop build is available in [desktop/README.md](desktop/README.md). It packages the interface, Python engine, and existing models; recordings and results stay in the user’s application workspace. The development build is not yet signed or notarized for public distribution.
+
+### Analysis storage
+
+Use **Change location** on either Videos screen to choose a folder on your computer or an external drive. The app creates a **Mouse Behavior Analysis** workspace there for uploaded videos, temporary uploads, prepared clips, tracking, preview videos, and results. Each location keeps its own batches and settings; switching does not move or delete previous data. Reconnect an unavailable drive or choose another location. Storage changes are blocked during uploads and analyses.
+
+Video uploads use 16 MB binary chunks, and the previous 4 GB per-file restriction is removed. Batches support 150 recordings; files are uploaded and analyzed sequentially.

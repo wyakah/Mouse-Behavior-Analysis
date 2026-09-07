@@ -65,7 +65,7 @@ def secure_app(app, token):
         if not secrets.compare_digest(request.cookies.get('behavior_session',''), token):abort(403)
     @app.get('/api/desktop')
     def desktop_info():
-        return jsonify(version='0.1.5',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
+        return jsonify(version='0.1.6',workspace=str(app.config['DESKTOP_WORKSPACE']),offline=True)
 
 def active_jobs(workspace):
     for pattern in ('batches/*/batch.json','outputs/stereo-*/batch.json'):
@@ -114,7 +114,8 @@ def run(bundle, workspace, ready):
     os.environ.update(DLC_PYTHON=str(python),DLC_LIGHT='True',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',PYTHONDONTWRITEBYTECODE='1')
     sys.path.insert(0,str(workspace))
     import app as application
-    application.app.config['DESKTOP_WORKSPACE']=str(workspace)
+    if application.ROOT!=workspace:mark_interrupted(application.ROOT)
+    application.app.config['DESKTOP_WORKSPACE']=str(application.ROOT)
     token=secrets.token_urlsafe(32)
     secure_app(application.app,token)
     from werkzeug.serving import make_server, WSGIRequestHandler
@@ -124,7 +125,7 @@ def run(bundle, workspace, ready):
     def watch_jobs():
         marker=workspace/'.desktop-active'
         while True:
-            if active_jobs(workspace):marker.touch()
+            if active_jobs(application.ROOT):marker.touch()
             else:marker.unlink(missing_ok=True)
             time.sleep(.5)
     threading.Thread(target=watch_jobs,daemon=True).start()

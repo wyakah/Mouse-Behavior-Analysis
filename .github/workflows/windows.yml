@@ -26,7 +26,7 @@ jobs:
         run: python desktop/build_windows_payload.py
       - name: Verify analysis engine on Windows
         run: |
-          desktop/bundle/runtime/python.exe -B -m pytest tests/test_analysis.py tests/test_social.py tests/test_streaming.py tests/test_desktop.py -q
+          desktop/bundle/runtime/python.exe -B -m pytest tests/test_analysis.py tests/test_social.py tests/test_streaming.py tests/test_desktop.py tests/test_storage_uploads.py tests/test_recordings.py -q
           desktop/bundle/runtime/python.exe -B desktop/windows_smoke.py --bundle desktop/bundle
       - name: Build Windows installer
         working-directory: desktop
@@ -60,15 +60,15 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force desktop/dist | Out-Null
           $installer = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          Copy-Item $installer.FullName desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe
-          $hash = (Get-FileHash desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  Behavior-Studio-0.1.5-windows-x64-setup.exe" | Set-Content desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe.sha256
+          Copy-Item $installer.FullName desktop/dist/Behavior-Studio-0.1.6-windows-x64-setup.exe
+          $hash = (Get-FileHash desktop/dist/Behavior-Studio-0.1.6-windows-x64-setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  Behavior-Studio-0.1.6-windows-x64-setup.exe" | Set-Content desktop/dist/Behavior-Studio-0.1.6-windows-x64-setup.exe.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: Windows-installer
           path: desktop/dist/*
       - name: Upload verified installer to draft release
-        run: gh release upload v0.1.5 desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe desktop/dist/Behavior-Studio-0.1.5-windows-x64-setup.exe.sha256 --clobber
+        run: gh release upload v0.1.6 desktop/dist/Behavior-Studio-0.1.6-windows-x64-setup.exe desktop/dist/Behavior-Studio-0.1.6-windows-x64-setup.exe.sha256 --clobber
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -61,3 +61,6 @@ desktop/src-tauri/gen/
 
 desktop/engine.zip
 desktop/engine.json
+
+.storage-preferences.json
+.storage-preferences.tmp

@@ -227,10 +227,10 @@ def test_sessions_enforce_first_twenty_minutes(client, monkeypatch):
 
 def test_queue_limit_metadata_defaults_and_export(client):
     c,root=client
-    for i in range(20):(root/f'clip{i}.mp4').write_bytes((root/'tiny.mp4').read_bytes())
-    rows=[dict(id=f'M{i}',video=f'clip{i}.mp4',sex='female',genotype='WT') for i in range(20)]
+    for i in range(150):(root/f'clip{i}.mp4').write_bytes((root/'tiny.mp4').read_bytes())
+    rows=[dict(id=f'M{i}',video=f'clip{i}.mp4',sex='female',genotype='WT') for i in range(150)]
     assert c.post('/api/stereotypy/draft',json={'entries':rows}).status_code==200
-    assert len(c.get('/api/stereotypy/draft').json['entries'])==20
+    assert len(c.get('/api/stereotypy/draft').json['entries'])==150
     assert c.post('/api/stereotypy/draft',json={'entries':rows+[rows[0]]}).status_code==400
     assert c.post('/api/stereotypy/setup',json={'entries':rows}).status_code==200
     response=c.post('/api/stereotypy/sessions',json=dict(video='tiny.mp4',animal_id='M01',sex='female',genotype='WT',view_confirmed=True))

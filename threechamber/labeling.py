@@ -48,34 +48,35 @@ def export_labels(root):
     manifest={'reviewed_frames':len(reviewed),'coordinate_space':'Cropped image; native pixels; x offset 190 and y offset 175 for original coordinates.','profile':profile,'parts':PARTS,'source_videos':sorted({e['source'] for e in reviewed}),'split_policy':'Subjects 675 and 678 train; 685 development validation. All three have been inspected already; final independent accuracy needs additional footage.','label_source':'Explicitly reviewed annotations only; no automatic acceptance of model suggestions.'}
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2));return out,manifest
 
-def register_labeling(app,root):
+def register_labeling(app,root_getter):
+    def root():return root_getter() if callable(root_getter) else root_getter
     bp=Blueprint('labeling',__name__)
     def queue():
-        p=root/'labeling/queue.json';return json.loads(p.read_text()) if p.exists() else []
+        p=root()/'labeling/queue.json';return json.loads(p.read_text()) if p.exists() else []
     def annotations():
-        p=root/'labeling/annotations.json';return json.loads(p.read_text()) if p.exists() else {}
+        p=root()/'labeling/annotations.json';return json.loads(p.read_text()) if p.exists() else {}
     @bp.get('/labeling')
-    def page():return send_file(root/'static/labeling.html')
+    def page():return send_file(root()/'static/labeling.html')
     @bp.get('/api/labeling')
-    def get_queue():return jsonify({'proposals':json.loads((root/'labeling/proposals.json').read_text()) if (root/'labeling/proposals.json').exists() else {},'entries':queue(),'annotations':annotations(),'parts':PARTS,'profile':json.loads((root/'profiles/ethovision_three_chamber.json').read_text())})
+    def get_queue():return jsonify({'proposals':json.loads((root()/'labeling/proposals.json').read_text()) if (root()/'labeling/proposals.json').exists() else {},'entries':queue(),'annotations':annotations(),'parts':PARTS,'profile':json.loads((root()/'profiles/ethovision_three_chamber.json').read_text())})
     @bp.get('/api/labeling/image/<id>')
     def image(id):
         entry=next((e for e in queue() if e['id']==id),None)
         if entry is None:raise ValueError('Unknown label frame.')
-        return send_file(root/entry['image'],mimetype='image/png')
+        return send_file(root()/entry['image'],mimetype='image/png')
     @bp.post('/api/labeling/<id>')
     def save(id):
         entry=next((e for e in queue() if e['id']==id),None)
         if entry is None:raise ValueError('Unknown label frame.')
-        profile=json.loads((root/'profiles/ethovision_three_chamber.json').read_text());record=validate_annotation(request.get_json(),entry,profile)
+        profile=json.loads((root()/'profiles/ethovision_three_chamber.json').read_text());record=validate_annotation(request.get_json(),entry,profile)
         with LOCK:
             all_annotations=annotations();old=all_annotations.get(id)
             if old:
-                hist=root/'labeling/history';hist.mkdir(exist_ok=True);(hist/f'{id}-{uuid.uuid4().hex}.json').write_text(json.dumps(old,indent=2))
-            all_annotations[id]=record;tmp=root/'labeling/annotations.tmp';tmp.write_text(json.dumps(all_annotations,indent=2));tmp.replace(root/'labeling/annotations.json')
+                hist=root()/'labeling/history';hist.mkdir(exist_ok=True);(hist/f'{id}-{uuid.uuid4().hex}.json').write_text(json.dumps(old,indent=2))
+            all_annotations[id]=record;tmp=root()/'labeling/annotations.tmp';tmp.write_text(json.dumps(all_annotations,indent=2));tmp.replace(root()/'labeling/annotations.json')
         return jsonify(saved=True)
     @bp.post('/api/labeling/export')
     def export():
-        with LOCK:out,manifest=export_labels(root)
-        return jsonify(path=str(out.relative_to(root)),**manifest)
+        with LOCK:out,manifest=export_labels(root())
+        return jsonify(path=str(out.relative_to(root())),**manifest)
     app.register_blueprint(bp)

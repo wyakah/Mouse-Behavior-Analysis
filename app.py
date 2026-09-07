@@ -7,15 +7,51 @@ import json, os, subprocess, sys, uuid
 import cv2
 from flask import Flask,request,jsonify,send_file,send_from_directory,abort
 from threechamber.core import metadata,analyze,calibration,analysis_geometry,propose_interaction_zones,propose_circles
-ROOT=Path(__file__).resolve().parent
-app=Flask(__name__,static_folder='static'); app.config['MAX_CONTENT_LENGTH']=4*1024*1024*1024
+ENGINE_ROOT=Path(__file__).resolve().parent
+ROOT=ENGINE_ROOT
+from threechamber.storage import prepare_workspace,register_storage
+preferences=ENGINE_ROOT/'.storage-preferences.json'
+if preferences.exists():
+    ROOT=Path(json.loads(preferences.read_text())['path'])
+    if ROOT.is_dir():prepare_workspace(ENGINE_ROOT,ROOT)
+if (ENGINE_ROOT/'.dlc-env/bin/python').is_file():os.environ.setdefault('DLC_PYTHON',str(ENGINE_ROOT/'.dlc-env/bin/python'))
+app=Flask(__name__,static_folder='static'); app.config['MAX_CONTENT_LENGTH']=None
 pool=ThreadPoolExecutor(max_workers=1); jobs={}
 from threechamber.labeling import register_labeling
-register_labeling(app,ROOT)
+register_labeling(app,lambda:ROOT)
 from threechamber.batch import register_batch
 register_batch(app,lambda:ROOT,pool)
 from stereotypy.api import register_stereotypy
 register_stereotypy(app,lambda:ROOT,pool,jobs)
+
+def set_storage_root(path):
+    global ROOT
+    ROOT=Path(path)
+    app.config['DESKTOP_WORKSPACE']=str(ROOT)
+def storage_busy():
+    from desktop.service import active_jobs
+    import time
+    return any(time.monotonic()-t<600 for t in app.extensions.get("active_uploads",{}).values()) or active_jobs(ROOT) or any(j.get('status') in ('queued','running') for j in jobs.values())
+register_storage(app,ENGINE_ROOT,lambda:ROOT,set_storage_root,storage_busy)
+from threechamber.uploads import register_uploads
+register_uploads(app,lambda:ROOT)
+
+# Stream multipart files directly onto the selected drive, not the system temp disk.
+from flask import Request
+class DriveRequest(Request):
+    def _get_file_stream(self,total_content_length,content_type,filename=None,content_length=None):
+        import tempfile
+        folder=ROOT/'.cache/upload-temp';folder.mkdir(parents=True,exist_ok=True)
+        return tempfile.TemporaryFile(mode='w+b',dir=folder)
+app.request_class=DriveRequest
+from werkzeug.exceptions import HTTPException
+@app.errorhandler(HTTPException)
+def http_error(error):return jsonify(error=error.description),error.code
+@app.errorhandler(OSError)
+def disk_error(error):
+    import errno
+    message='The storage drive is full. Free space or choose another location.' if error.errno==errno.ENOSPC else 'The storage location could not be read or written. Check the drive connection and permissions.'
+    return jsonify(error=message),507 if error.errno==errno.ENOSPC else 500
 
 def local(value):
     p=(ROOT/value).resolve()
@@ -57,7 +93,11 @@ def upload_video():
     f=request.files.get('file')
     if f is None or Path(f.filename or '').suffix.lower() not in ('.mp4','.avi','.mov','.mkv','.m4v'):raise ValueError('Choose an MP4, AVI, MOV, or MKV video.')
     folder=ROOT/'videos';folder.mkdir(exist_ok=True)
-    name=uuid.uuid4().hex[:8]+'_'+secure_filename(f.filename);p=folder/name;f.save(p)
+    name=uuid.uuid4().hex[:8]+'_'+secure_filename(f.filename);p=folder/name
+    try:f.save(p)
+    except OSError:
+        p.unlink(missing_ok=True)
+        raise
     try:info=metadata(p)
     except Exception as e:
         p.rename(p.with_suffix(p.suffix+'.unreadable'))
@@ -237,5 +277,6 @@ def output(jobid,filename):
     return send_from_directory(local('outputs/'+jobid),filename,conditional=True,as_attachment=request.args.get('download')=='1')
 
 if __name__=='__main__':
-    for folder in ['configs','outputs','reports','tracks']: (ROOT/folder).mkdir(exist_ok=True)
+    for folder in ['configs','outputs','reports','tracks']:
+        if ROOT.is_dir():(ROOT/folder).mkdir(exist_ok=True)
     app.run(host='127.0.0.1',port=int(os.environ.get('PORT','8765')),debug=False,threaded=True)

@@ -39,3 +39,5 @@
 .sample-meta:empty{display:none}
 
 .social-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0}.social-metrics>div{padding:12px;background:#edf3e8;border-radius:6px;font-size:11px}.social-metrics b{display:block;font-size:23px;margin-top:6px}.social-metrics>div:nth-child(4n){background:#dcebe1}@media(max-width:580px){.social-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.storage-location{display:flex;align-items:center;gap:12px;margin:0 0 16px;font-size:12px}.storage-location span{overflow-wrap:anywhere;flex:1}.storage-dialog{width:min(650px,90vw);border:1px solid #ccd7ce;border-radius:12px;padding:24px}.storage-dialog::backdrop{background:#18281c66}.storage-path,.storage-actions{display:flex;gap:8px;margin:12px 0}.storage-path input{flex:1;min-width:0}.storage-folders{height:280px;overflow:auto;display:flex;flex-direction:column;gap:4px}.storage-folders button{text-align:left}.storage-actions{justify-content:flex-end}

@@ -3,6 +3,7 @@ class RecordingSetup {
   constructor(host, options) {
     this.host=host;this.options=options;this.busy=false;this.available=[];
     host.innerHTML=`<div class="recording-upload"><label class="button primary">Upload videos<input class="visually-hidden" type="file" multiple accept=".mp4,.avi,.mov,.mkv,.m4v"></label><span data-count></span></div><div class="recording-list"></div><details class="recording-existing"><summary>Choose videos already on this computer</summary><div class="existing-picker"><select aria-label="Workspace video"><option value="">Choose a video</option></select><button data-add>Add video</button></div></details><div class="recording-next"><p data-status role="status"></p><button data-continue class="primary">Continue →</button></div>`;
+    window.mountStorage?.(host);
     this.input=host.querySelector('input[type=file]');this.input.onchange=()=>this.upload([...this.input.files]);
     host.querySelector('[data-add]').onclick=()=>this.addExisting();
     host.querySelector('[data-continue]').onclick=async()=>{try{if(this.valid()&&!this.busy&&!options.disabled?.())await options.continue();}catch(e){this.status(e.message,true);}};
@@ -10,12 +11,12 @@ class RecordingSetup {
   }
   entries(){return this.options.entries();}
   stranger(e){return e.stranger_side??e.config?.stranger_side??e.config?.target_side??'';}
-  valid(){const ids=this.entries().map(e=>String(e.id||'').trim());return ids.length>0&&ids.length<=20&&ids.every(Boolean)&&new Set(ids).size===ids.length&&(!this.options.strangerPosition||this.entries().every(e=>['left','right'].includes(this.stranger(e))));}
+  valid(){const ids=this.entries().map(e=>String(e.id||'').trim());return ids.length>0&&ids.length<=150&&ids.every(Boolean)&&new Set(ids).size===ids.length&&(!this.options.strangerPosition||this.entries().every(e=>['left','right'].includes(this.stranger(e))));}
   status(message,error=false){const p=this.host.querySelector('[data-status]');p.textContent=message;p.classList.toggle('error',error);}
   update(){
     const n=this.entries().length,disabled=this.busy||this.options.disabled?.();
-    this.host.querySelector('[data-count]').textContent=`${n} / 20 videos`;
-    this.input.disabled=disabled||n>=20;this.host.querySelector('[data-add]').disabled=disabled||n>=20||!this.available.some(v=>!this.entries().some(e=>e.video===v.name));
+    this.host.querySelector('[data-count]').textContent=`${n} video${n===1?'':'s'}`;
+    this.input.disabled=disabled||n>=150;this.host.querySelector('[data-add]').disabled=disabled||n>=150||!this.available.some(v=>!this.entries().some(e=>e.video===v.name));
     this.host.querySelector('[data-continue]').disabled=disabled||!this.valid();
     if(!this.busy)this.status(!n?'':!this.valid()?(this.options.strangerPosition?'Enter unique mouse IDs and choose each stranger position.':'Enter a unique mouse ID for each video.'):'');
   }
@@ -41,7 +42,7 @@ class RecordingSetup {
     this.renderPicker();this.update();
   }
   async add(name){
-    if(this.entries().length>=20)throw Error('A setup can contain up to 20 videos. Remove a video to add another.');
+    if(this.entries().length>=150)throw Error('A setup can contain up to 150 videos. Remove a video to add another.');
     if(this.entries().some(e=>e.video===name))return;
     const e=await this.options.seed(name),base=String(e.id||'Mouse').slice(0,96);let id=base,n=2;while(this.entries().some(e=>e.id===id))id=`${base}-${n++}`;
     this.entries().push({...e,id,sex:e.sex||'unknown',genotype:e.genotype||''});await this.options.change();
@@ -49,11 +50,18 @@ class RecordingSetup {
   async addExisting(){const select=this.host.querySelector('.existing-picker select');if(!select.value||this.busy)return;const name=select.value;let failure;this.busy=true;this.render();try{await this.add(name);}catch(error){failure=error.message;}finally{this.busy=false;this.render();if(failure)this.status(failure,true);}}
   async upload(files){
     if(this.busy||!files.length)return;
-    if(files.length+this.entries().length>20){this.input.value='';this.status(`Choose at most ${20-this.entries().length} more videos. No files were uploaded.`,true);return;}
+    if(files.length+this.entries().length>150){this.input.value='';this.status(`Choose at most ${150-this.entries().length} more videos. No files were uploaded.`,true);return;}
     this.busy=true;this.options.busy?.(true);this.render();const failures=[];
     try{for(const [i,file] of files.entries()){
       this.status(`Uploading ${i+1} of ${files.length}: ${file.name}`);
-      try{const form=new FormData();form.append('file',file);const response=await fetch('/api/videos/upload',{method:'POST',body:form});const data=await response.json();if(!response.ok)throw Error(data.error||'Upload failed.');await this.add(data.name);}catch(error){failures.push(`${file.name}: ${error.message}`);}
+      let uploadId;
+      const send=async(url,body,json=true)=>{const response=await fetch(url,{method:'POST',headers:{'Content-Type':json?'application/json':'application/octet-stream'},body:json?JSON.stringify(body):body});let data;try{data=await response.json();}catch(_){throw Error(`Upload failed (HTTP ${response.status}). Check the drive connection and retry.`);}if(!response.ok)throw Error(typeof data.error==='string'?data.error:`Upload failed (HTTP ${response.status}).`);return data;};
+      try{
+        const session=await send('/api/videos/upload/start',{name:file.name,size:file.size});uploadId=session.id;
+        for(let offset=0;offset<file.size;){const end=Math.min(file.size,offset+session.chunk_bytes);const result=await send(`/api/videos/upload/chunk?id=${uploadId}&offset=${offset}`,file.slice(offset,end),false);if(result.offset!==end)throw Error('Upload did not complete this chunk. Retry the file.');offset=end;this.status(`Uploading ${i+1} of ${files.length}: ${file.name} · ${Math.round(100*offset/file.size)}%`);}
+        const data=await send('/api/videos/upload/finish',{id:uploadId});uploadId=null;await this.add(data.name);
+      }catch(error){failures.push(`${file.name}: ${error.message}`);if(uploadId)try{await send('/api/videos/upload/cancel',{id:uploadId});}catch(_){} }
+
     }}finally{this.busy=false;this.options.busy?.(false);this.input.value='';this.render();if(failures.length)this.status(failures.join(' · '),true);}
   }
 }
